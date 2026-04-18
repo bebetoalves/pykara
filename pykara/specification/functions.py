@@ -19,7 +19,7 @@ class FunctionSpecification:
 FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
     "retime": FunctionSpecification(
         "retime",
-        "retime.<target>(start_offset: int = 0, end_offset: int = 0) -> str",
+        "retime.<target>(start_offset: int = 0, end_offset: int = 0) -> None",
         "engine",
         (
             "Namespace with targets line, preline, postline, syl, presyl, "
@@ -28,9 +28,9 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
         ),
         frozenset({"template"}),
     ),
-    "relayer": FunctionSpecification(
-        "relayer",
-        "relayer(layer: int) -> str",
+    "layer.set": FunctionSpecification(
+        "layer.set",
+        "layer.set(value: int) -> None",
         "engine",
         "Set the output line layer.",
         frozenset({"template", "code"}),
@@ -49,30 +49,34 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
         "Store one value in the shared store.",
         frozenset({"template", "code"}),
     ),
-    "color.ass": FunctionSpecification(
-        "color.ass",
-        "color.ass(r: int, g: int, b: int) -> str",
+    "color.rgb_to_ass": FunctionSpecification(
+        "color.rgb_to_ass",
+        "color.rgb_to_ass(red: int, green: int, blue: int) -> str",
         "color",
         "Build an ASS color string in override format.",
         frozenset({"template", "code"}),
     ),
     "color.alpha": FunctionSpecification(
         "color.alpha",
-        "color.alpha(a: int) -> str",
+        "color.alpha(alpha: int) -> str",
         "color",
         "Build an ASS alpha string.",
         frozenset({"template", "code"}),
     ),
     "color.interpolate": FunctionSpecification(
         "color.interpolate",
-        "color.interpolate(t: float, c1: str, c2: str) -> str",
+        (
+            "color.interpolate("
+            "progress: float, start_color: str, end_color: str"
+            ") -> str"
+        ),
         "color",
-        "Interpolate between two colors at t in [0, 1].",
+        "Interpolate between two colors at progress in [0, 1].",
         frozenset({"template", "code"}),
     ),
-    "math.polar": FunctionSpecification(
-        "math.polar",
-        "math.polar(angle: float, radius: float, axis: str | None = None)",
+    "coord.polar": FunctionSpecification(
+        "coord.polar",
+        "coord.polar(angle: float, radius: float, axis: str | None = None)",
         "geometry",
         "Return screen-space polar coordinates, with positive angles upward.",
         frozenset({"template", "code"}),
@@ -91,23 +95,23 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
         "Rotate every point in an ASS drawing shape.",
         frozenset({"template", "code"}),
     ),
-    "shape.centerpos": FunctionSpecification(
-        "shape.centerpos",
-        "shape.centerpos(shape: str, x: float = 0, y: float = 0) -> str",
+    "shape.center_at": FunctionSpecification(
+        "shape.center_at",
+        "shape.center_at(shape: str, x: float = 0, y: float = 0) -> str",
         "geometry",
         "Move a shape so its bounding-box center is at x,y.",
         frozenset({"template", "code"}),
     ),
     "shape.displace": FunctionSpecification(
         "shape.displace",
-        "shape.displace(shape: str, dx: float, dy: float) -> str",
+        "shape.displace(shape: str, offset_x: float, offset_y: float) -> str",
         "geometry",
         "Displace every point in an ASS drawing shape.",
         frozenset({"template", "code"}),
     ),
-    "shape.slider": FunctionSpecification(
-        "shape.slider",
-        "shape.slider(width: float, angle=0, x=0, y=0, height=None) -> str",
+    "shape.split_clip": FunctionSpecification(
+        "shape.split_clip",
+        "shape.split_clip(width: float, angle=0, x=0, y=0, height=None) -> str",
         "geometry",
         "Build a rotated split clipping shape centered at x,y.",
         frozenset({"template", "code"}),
@@ -178,5 +182,5 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
 }
 
 EXPOSED_MODULES: frozenset[str] = frozenset(
-    {"color", "coord", "math", "random", "shape"}
+    {"color", "coord", "layer", "math", "random", "shape"}
 )

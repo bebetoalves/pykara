@@ -18,15 +18,15 @@ from pykara.engine.functions import (
     FunctionRegistry,
     GetFunction,
     InterpolateColorFunction,
+    LayerSetFunction,
     PolarFunction,
-    RelayerFunction,
     RetimeFunction,
     RoundCoordFunction,
     SetFunction,
-    ShapeCenterposFunction,
+    ShapeCenterAtFunction,
     ShapeDisplaceFunction,
     ShapeRotateFunction,
-    ShapeSliderFunction,
+    ShapeSplitClipFunction,
 )
 from pykara.errors import EngineError
 
@@ -166,7 +166,7 @@ class TestRetimeFunction:
         retime = RetimeFunction().build_bound(env)
         result = getattr(retime, target)(start_offset, end_offset)
 
-        assert result == ""
+        assert result is None
         assert (env.line.start_time, env.line.end_time) == expected
         assert env.line.duration == expected[1] - expected[0]
 
@@ -215,13 +215,13 @@ class TestRetimeFunction:
             retime.line.ltr(-300, 0)
 
 
-class TestRelayerFunction:
+class TestLayerSetFunction:
     def test_sets_layer(self) -> None:
         env = DummyEnvironment()
 
-        result = RelayerFunction()(env, 7)
+        result = LayerSetFunction()(env, 7)
 
-        assert result == ""
+        assert result is None
         assert env.line.layer == 7
 
 
@@ -280,19 +280,19 @@ class TestGeometryFunctions:
         assert round_coord(object(), 3.49) == 3
         assert round_coord(object(), 3.5) == 4
 
-    def test_shape_rotate_centerpos_and_displace(self) -> None:
+    def test_shape_rotate_center_at_and_displace(self) -> None:
         shape = "m 0 0 l 10 0 l 10 20"
 
         rotated = ShapeRotateFunction()(object(), shape, 90)
-        centered = ShapeCenterposFunction()(object(), rotated)
+        centered = ShapeCenterAtFunction()(object(), rotated)
         displaced = ShapeDisplaceFunction()(object(), centered, 50, 60)
 
         assert rotated == "m 0 0 l 0 -10 l 20 -10"
         assert centered == "m -10 5 l -10 -5 l 10 -5"
         assert displaced == "m 40 65 l 40 55 l 60 55"
 
-    def test_shape_slider_builds_centered_split_clip(self) -> None:
-        result = ShapeSliderFunction()(object(), 20, 0, 50, 60)
+    def test_shape_split_clip_builds_centered_split_clip(self) -> None:
+        result = ShapeSplitClipFunction()(object(), 20, 0, 50, 60)
 
         assert result == "m 40 60 l 60 60 l 60 50 l 40 50 m 40 70 l 60 70"
 
@@ -311,14 +311,15 @@ class TestFunctionRegistry:
     def test_build_namespace_binds_environment(self) -> None:
         env = DummyEnvironment()
         registry = FunctionRegistry()
-        registry.register(RelayerFunction())
+        registry.register(LayerSetFunction())
 
         namespace = registry.build_namespace(env, "template")
-        relayer = cast(Callable[[int], object], namespace["relayer"])
-        assert isinstance(relayer, Callable)
-        result = relayer(4)
+        assert isinstance(namespace["layer"], SimpleNamespace)
+        layer_set = cast(Callable[[int], object], namespace["layer"].set)
+        assert isinstance(layer_set, Callable)
+        result = layer_set(4)
 
-        assert result == ""
+        assert result is None
         assert env.line.layer == 4
 
     def test_filters_by_declaration(self) -> None:
@@ -343,9 +344,9 @@ class TestFunctionRegistry:
 
         namespace = registry.build_namespace(object(), "template")
 
-        assert "math.polar" not in namespace
-        assert isinstance(namespace["math"], SimpleNamespace)
-        assert namespace["math"].polar(0, 30, "x") == 30
+        assert "coord.polar" not in namespace
+        assert isinstance(namespace["coord"], SimpleNamespace)
+        assert namespace["coord"].polar(0, 30, "x") == 30
 
 
 class TestDefaultRegistry:
@@ -354,15 +355,21 @@ class TestDefaultRegistry:
         namespace = FUNCTION_REGISTRY.build_namespace(env, "template")
 
         assert "retime" in namespace
-        assert "relayer" in namespace
+        assert isinstance(namespace["layer"], SimpleNamespace)
         assert "get" in namespace
         assert "set" in namespace
         assert isinstance(namespace["color"], SimpleNamespace)
-        assert isinstance(namespace["math"], SimpleNamespace)
         assert isinstance(namespace["coord"], SimpleNamespace)
         assert isinstance(namespace["shape"], SimpleNamespace)
-        assert namespace["color"].ass(255, 128, 0) == "&H000080FF&"
+        assert namespace["color"].rgb_to_ass(255, 128, 0) == "&H000080FF&"
+        assert (
+            namespace["color"].rgb_to_ass(red=255, green=128, blue=0)
+            == "&H000080FF&"
+        )
+        assert namespace["layer"].set(3) is None
+        assert env.line.layer == 3
         assert namespace["color"].alpha(255) == "&HFF&"
+        assert namespace["color"].alpha(alpha=255) == "&HFF&"
         assert (
             namespace["color"].interpolate(
                 0.5,
@@ -371,13 +378,21 @@ class TestDefaultRegistry:
             )
             == "&H00808080&"
         )
-        assert namespace["math"].polar(0, 30, "x") == 30
+        assert (
+            namespace["color"].interpolate(
+                progress=0.5,
+                start_color="&H00000000",
+                end_color="&HFFFFFF&",
+            )
+            == "&H00808080&"
+        )
+        assert namespace["coord"].polar(0, 30, "x") == 30
         assert namespace["coord"].round(3.5) == 4
         assert namespace["shape"].rotate("m 0 0 l 10 0", 90) == (
             "m 0 0 l 0 -10"
         )
-        assert namespace["shape"].centerpos("m 0 0 l 10 0") == ("m -5 0 l 5 0")
+        assert namespace["shape"].center_at("m 0 0 l 10 0") == ("m -5 0 l 5 0")
         assert namespace["shape"].displace("m 0 0", 1, 2) == "m 1 2"
-        assert namespace["shape"].slider(20, 0, 50, 60) == (
+        assert namespace["shape"].split_clip(20, 0, 50, 60) == (
             "m 40 60 l 60 60 l 60 50 l 40 50 m 40 70 l 60 70"
         )

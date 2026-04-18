@@ -1,11 +1,20 @@
 # Pykara Documentation
 
-Pykara generates karaoke effect (`fx`) lines for ASS subtitle files.
+**Pykara** is a karaoke templating framework written in Python. It is conceptually inspired by the legacy Kara Templater
+from Aegisub (originally implemented in Lua).
 
 ## Installation
 
+Using `pipx` (recommended for isolated CLI tools):
+
 ```sh
-pip install pykara-templater
+pipx install .
+```
+
+Alternatively, for development or local usage:
+
+```sh
+pip install .
 ```
 
 ## Command-Line Usage
@@ -25,37 +34,35 @@ pykara input.ass output.ass --seed 42
 | `--warn-only` | Demote validation errors to warnings and continue. |
 | `--seed N` | Deterministic RNG seed. |
 
-## Quick Links
-
-- **[Directives](./directives.md)** — The template directive system.
-- **[Tools](./tools.md)** — Functions available inside templates.
-
 ## Documentation
 
 ### Directives
 
 - [Types](./directives/types.md) — Template and code directives.
-- [Scopes](./directives/scopes.md) — Init, line, word, syllable, and character scopes.
+- [Scopes](./directives/scopes.md) — Setup, line, word, syllable, and character scopes.
+- [Variables](./directives/variables.md) — Complete `$variable` reference.
+- [Objects](./directives/objects.md) — Properties available in `!expr!`.
 - [Modifiers](./directives/modifiers.md) — Template modifier keywords.
-- [Interpolation](./directives/interpolation.md) — `$var` and `!expr!` syntax.
 
 ### Scopes
 
-- [Init Scope](./directives/init-scope.md)
-- [Line Scope](./directives/line-scope.md)
-- [Word Scope](./directives/word-scope.md)
-- [Syllable Scope](./directives/syllable-scope.md)
-- [Char Scope](./directives/char-scope.md)
+- [Setup Scope](./directives/setup-scope.md) — One-time setup before any karaoke line runs.
+- [Line Scope](./directives/line-scope.md) — One execution per karaoke line.
+- [Word Scope](./directives/word-scope.md) — One execution per visible word.
+- [Syllable Scope](./directives/syllable-scope.md) — One execution per karaoke syllable.
+- [Char Scope](./directives/char-scope.md) — One execution per character inside a syllable.
 
 ### Tools
 
-- [retime](./tools/retime.md)
-- [relayer](./tools/relayer.md)
-- [color](./tools/color.md)
-- [store](./tools/store.md)
-- [math](./tools/math.md)
-- [random](./tools/random.md)
+- [retime](./tools/retime.md) — Choose source timing for generated lines.
+- [layer](./tools/layer.md) — Change generated line layers while rendering.
+- [color](./tools/color.md) — Build ASS colors, alpha values, and blends.
+- [global](./tools/global.md) — Share temporary values between templates and scoped code.
+- [coord](./tools/coord.md) — Round coordinates or calculate screen-space offsets.
+- [shape](./tools/shape.md) — Move, rotate, center, or generate ASS drawings.
+- [math](./tools/math.md) — Run numeric calculations inside `!expr!` and code.
+- [random](./tools/random.md) — Add pseudo-random variation to generated lines.
 
 ## License
 
-MIT.
+Distributed under the MIT License.

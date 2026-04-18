@@ -14,16 +14,26 @@ def _clamp_byte(value: int) -> int:
 class AssColorFunction:
     """Return an ASS color string in ``&H00BBGGRR&`` format."""
 
-    name: ClassVar[str] = "color.ass"
+    name: ClassVar[str] = "color.rgb_to_ass"
     aliases: ClassVar[tuple[str, ...]] = ()
     applicable_to: ClassVar[frozenset[str]] = frozenset({"template", "code"})
 
-    def __call__(self, env: object, r: int, g: int, b: int) -> str:
+    def __call__(
+        self,
+        env: object,
+        red: int,
+        green: int,
+        blue: int,
+    ) -> str:
         del env
-        red = _clamp_byte(r)
-        green = _clamp_byte(g)
-        blue = _clamp_byte(b)
-        return f"&H00{blue:02X}{green:02X}{red:02X}&"
+        red_component = _clamp_byte(red)
+        green_component = _clamp_byte(green)
+        blue_component = _clamp_byte(blue)
+        return (
+            f"&H00{blue_component:02X}"
+            f"{green_component:02X}"
+            f"{red_component:02X}&"
+        )
 
 
 class AssAlphaFunction:
@@ -33,10 +43,10 @@ class AssAlphaFunction:
     aliases: ClassVar[tuple[str, ...]] = ()
     applicable_to: ClassVar[frozenset[str]] = frozenset({"template", "code"})
 
-    def __call__(self, env: object, a: int) -> str:
+    def __call__(self, env: object, alpha: int) -> str:
         del env
-        alpha = _clamp_byte(a)
-        return f"&H{alpha:02X}&"
+        alpha_component = _clamp_byte(alpha)
+        return f"&H{alpha_component:02X}&"
 
 
 class InterpolateColorFunction:
@@ -46,6 +56,12 @@ class InterpolateColorFunction:
     aliases: ClassVar[tuple[str, ...]] = ()
     applicable_to: ClassVar[frozenset[str]] = frozenset({"template", "code"})
 
-    def __call__(self, env: object, t: float, c1: str, c2: str) -> str:
+    def __call__(
+        self,
+        env: object,
+        progress: float,
+        start_color: str,
+        end_color: str,
+    ) -> str:
         del env
-        return interpolate_color(t, c1, c2)
+        return interpolate_color(progress, start_color, end_color)

@@ -1005,6 +1005,7 @@ class Environment:
     char: Syllable | None = None
     char_index: int | None = None
     line_char_count: int | None = None
+    active_code_scope: Scope | None = None
     active_template_scope: Scope | None = None
     retime_used: bool = False
     retime_line_words: tuple[Word, ...] = ()
@@ -1052,10 +1053,20 @@ class Environment:
         return namespace
 
     def _function_namespace(self) -> dict[str, object]:
-        cached = self._function_namespace_cache.get(self.declaration)
+        cache_key = f"{self.declaration}:{self.active_code_scope or ''}"
+        cached = self._function_namespace_cache.get(cache_key)
         if cached is None:
             cached = FUNCTION_REGISTRY.build_namespace(self, self.declaration)
-            self._function_namespace_cache[self.declaration] = cached
+            if (
+                self.declaration == "code"
+                and self.active_code_scope is Scope.SETUP
+            ):
+                cached = {
+                    name: value
+                    for name, value in cached.items()
+                    if name not in {"get", "set"}
+                }
+            self._function_namespace_cache[cache_key] = cached
         return cached
 
     def _exposed_modules(self) -> dict[str, object]:

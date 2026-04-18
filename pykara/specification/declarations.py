@@ -28,7 +28,7 @@ TEMPLATE_DECLARATION = DeclarationSpecification(
 
 CODE_DECLARATION = DeclarationSpecification(
     name="code",
-    allowed_scopes=frozenset({Scope.INIT, Scope.LINE, Scope.WORD, Scope.SYL}),
+    allowed_scopes=frozenset({Scope.SETUP, Scope.LINE, Scope.WORD, Scope.SYL}),
     allowed_modifiers=frozenset(),
     description="Execute Python code in the execution environment.",
 )

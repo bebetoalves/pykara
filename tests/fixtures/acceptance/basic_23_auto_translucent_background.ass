@@ -21,7 +21,7 @@ Style: Default,Noto Sans,80,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code init,interlude = 1000
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code setup,interlude = 1000
 Comment: 0,0:00:00.00,0:00:00.00,Default,must match style,0,0,0,code line,preline_end = get("preline_end", line.start - interlude); inter_dur = line.start - preline_end; set("preline_end", line.end)
 Comment: 0,0:00:00.00,0:00:00.00,Default,must match style,0,0,0,code line,is_fade = inter_dur > interlude
 Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template char,{\an5\pos($char_center,$char_middle)\t(!set("time",(math.fabs((line.width/2)-(char.center-line.left)))*2)!,!get("time")+100!,\3c&HFFFFFF&)\t(!get("time")+100!,!get("time")+600!,\3c!style.outline_color!)\fad(300,300)}

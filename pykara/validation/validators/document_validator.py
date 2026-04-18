@@ -75,7 +75,7 @@ class DocumentValidator:
                 self._template_validator.validate(declaration)
             )
 
-        for declaration in declarations.init:
+        for declaration in declarations.setup:
             report = report.merge(self._code_validator.validate(declaration))
 
         return report.merge(

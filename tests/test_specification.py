@@ -19,8 +19,6 @@ from pykara.specification import (
 EXPECTED_TEMPLATE_VARIABLES = {
     "layer",
     "actor",
-    "loop_i",
-    "loop_n",
 }
 
 EXPECTED_LINE_VARIABLES = {
@@ -104,24 +102,24 @@ EXPECTED_MATH_FUNCTIONS = {
     "math.sin",
     "math.cos",
     "math.radians",
-    "math.polar",
 }
 
 EXPECTED_COLOR_FUNCTIONS = {
-    "color.ass",
+    "color.rgb_to_ass",
     "color.alpha",
     "color.interpolate",
 }
 
 EXPECTED_COORD_FUNCTIONS = {
     "coord.round",
+    "coord.polar",
 }
 
 EXPECTED_SHAPE_FUNCTIONS = {
     "shape.rotate",
-    "shape.centerpos",
+    "shape.center_at",
     "shape.displace",
-    "shape.slider",
+    "shape.split_clip",
 }
 
 EXPECTED_RANDOM_FUNCTIONS = {
@@ -253,7 +251,7 @@ class TestDeclarations:
 
     def test_code_scopes_match_contract(self) -> None:
         assert CODE_DECLARATION.allowed_scopes == frozenset(
-            {Scope.INIT, Scope.LINE, Scope.WORD, Scope.SYL}
+            {Scope.SETUP, Scope.LINE, Scope.WORD, Scope.SYL}
         )
 
 
@@ -365,7 +363,7 @@ class TestFunctions:
 
     def test_exposed_modules_are_unique(self) -> None:
         assert EXPOSED_MODULES == frozenset(
-            {"color", "coord", "math", "random", "shape"}
+            {"color", "coord", "layer", "math", "random", "shape"}
         )
 
 

@@ -1,27 +1,40 @@
 # math
 
-A selected subset of Python's `math` module is available.
+Use `math` for numeric calculations inside `!expr!` and `code`
+directives.
 
 ## Available Functions
 
-| Name | Description |
-|------|-------------|
-| `math.floor(x)` | Round down. |
-| `math.ceil(x)` | Round up. |
-| `math.fabs(x)` | Absolute value as a float. |
-| `math.sqrt(x)` | Square root. |
-| `math.sin(x)` | Sine (radians). |
-| `math.cos(x)` | Cosine (radians). |
-| `math.radians(x)` | Degrees to radians. |
-| `math.polar(angle, radius, axis=None)` | Screen-space polar coordinates. |
+### `math.floor(x)`
+
+Round down.
+
+### `math.ceil(x)`
+
+Round up.
+
+### `math.fabs(x)`
+
+Return the absolute value as a float.
+
+### `math.sqrt(x)`
+
+Return the square root.
+
+### `math.sin(x)`
+
+Return the sine of `x`, in radians.
+
+### `math.cos(x)`
+
+Return the cosine of `x`, in radians.
+
+### `math.radians(x)`
+
+Convert degrees to radians.
 
 ## Example
 
 ```ass
 {\frz!math.sin($syl_i) * 10!}
-{\pos(!$syl_center + math.polar(45, 30, "x")!,$syl_middle)}
 ```
-
-## See Also
-
-- [random](./random.md)

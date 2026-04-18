@@ -10,10 +10,10 @@ template syl loop 3 no_blank
 ## Reference
 
 | Modifier | Argument | Scopes | Purpose |
-|----------|----------|--------|---------|
+|------------|----------|-------------------------------|----------------------------------------------------|
 | `loop` | yes | `line`, `word`, `syl`, `char` | Repeat the template N times. |
-| `no_blank` | no | `word`, `syl`, `char` | Skip empty words, syllables, or characters. |
-| `no_text` | no | all | Do not append source text to the output. |
+| `no_blank` | no | `line`, `word`, `syl`, `char` | Skip empty lines, words, syllables, or characters. |
+| `no_text` | no | `line`, `word`, `syl`, `char` | Do not append source text to the output. |
 | `fx` | yes | `syl` | Match only syllables with the given inline-fx tag. |
 | `when` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is truthy. |
 | `unless` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is falsy. |
@@ -25,8 +25,8 @@ template syl loop 3
 template syl loop glow 2
 ```
 
-- `loop N` — exposes `loop_i` and `loop_n`.
-- `loop NAME N` — exposes `loop_NAME_i` and `loop_NAME_n`.
+- `loop N` — repeats the template and exposes `loop_i` plus `loop_n`.
+- `loop NAME N` — repeats the template and exposes `loop_NAME_i` plus `loop_NAME_n`.
 - `loop (EXPR)` / `loop NAME (EXPR)` — evaluates `EXPR` at runtime and
   uses the resulting positive integer.
 - Multiple named loops combine as a cartesian product.
@@ -34,7 +34,7 @@ template syl loop glow 2
 
 ## `no_blank`
 
-Skip words, syllables, or characters that have no visible text.
+Skip lines, words, syllables, or characters that have no visible text.
 
 ## `no_text`
 
@@ -52,16 +52,15 @@ Match only syllables tagged with the given inline-fx name.
 ## `when` / `unless`
 
 ```ass
-template syl when ($syl_i == 0)
-template syl unless ($syl_i == $syl_n - 1)
+template syl when glow
+template syl unless muted
+template syl when (syl.i == 0)
+template syl unless (syl.i == syl.n - 1)
 ```
 
-- `when EXPR` — run only if truthy.
-- `unless EXPR` — run only if falsy.
+- `when FLAG` / `unless FLAG` — read one variable or expression name.
+- `when (EXPR)` / `unless (EXPR)` — use a longer Python expression.
+- Expressions use the same names available inside `!expr!`, such as
+  `line.i`, `word.i`, `syl.i`, `char.i`, `style`, and `metadata`.
 
 Parentheses are required when the expression contains spaces.
-
-## See Also
-
-- [Types](./types.md)
-- [Scopes](./scopes.md)

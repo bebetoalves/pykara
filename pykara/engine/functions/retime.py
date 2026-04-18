@@ -287,11 +287,15 @@ class _RetimeTarget:
         self._env = env
         self._target = target
 
-    def __call__(self, start_offset: int = 0, end_offset: int = 0) -> str:
+    def __call__(
+        self,
+        start_offset: int = 0,
+        end_offset: int = 0,
+    ) -> None:
         self._apply(start_offset, end_offset, preset=None)
-        return ""
+        return None
 
-    def __getattr__(self, name: str) -> Callable[[int, int], str]:
+    def __getattr__(self, name: str) -> Callable[[int, int], None]:
         if name not in _PRESETS:
             raise AttributeError(name)
         return self._build_preset(name)
@@ -299,10 +303,10 @@ class _RetimeTarget:
     def _build_preset(
         self,
         preset: str,
-    ) -> Callable[[int, int], str]:
-        def call(start_offset: int = 0, end_offset: int = 0) -> str:
+    ) -> Callable[[int, int], None]:
+        def call(start_offset: int = 0, end_offset: int = 0) -> None:
             self._apply(start_offset, end_offset, preset=preset)
-            return ""
+            return None
 
         return call
 
@@ -355,7 +359,7 @@ class RetimeFunction:
             }
         )
 
-    def __call__(self, env: object, *args: object, **kwargs: object) -> str:
+    def __call__(self, env: object, *args: object, **kwargs: object) -> None:
         del env, args, kwargs
         raise EngineError("use retime.<target>(start_offset, end_offset)")
 
@@ -436,7 +440,7 @@ def _implicit_collection(
         current = _require_element_index(env.syl, "syl")
         return env.retime_line_syls, current
 
-    raise EngineError(f"retime.{target} has no implicit collection here")
+    raise EngineError(f"retime.{target} has no preset collection here")
 
 
 def _require_element_index(

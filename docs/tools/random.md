@@ -1,14 +1,17 @@
 # random
 
-A selected subset of Python's `random` module is available. Output is
-deterministic when `--seed` is passed to the CLI.
+Use `random` to add pseudo-random variation to generated lines, such as
+jitter, color choices, or rotation.
 
 ## Available Functions
 
-| Name | Description |
-|------|-------------|
-| `random.random()` | Uniform float in `[0.0, 1.0)`. |
-| `random.randint(a, b)` | Uniform int with `a <= N <= b`. |
+### `random.random()`
+
+Return a uniform float in `[0.0, 1.0)`.
+
+### `random.randint(a, b)`
+
+Return a uniform integer `N` such that `a <= N <= b`.
 
 ## Example
 
@@ -18,10 +21,9 @@ deterministic when `--seed` is passed to the CLI.
 
 ## Determinism
 
+Use `--seed` when you want the same input to produce the same random
+values every time. Without a seed, each run may produce different values.
+
 ```sh
 pykara input.ass output.ass --seed 42
 ```
-
-## See Also
-
-- [math](./math.md)

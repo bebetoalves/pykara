@@ -315,7 +315,7 @@ class TestTemplateRules:
 
     def test_template_allowed_scope_rule_reports_invalid_template(self) -> None:
         violation = TemplateAllowedScopeRule().check(
-            replace(make_template_declaration(), scope=Scope.INIT)
+            replace(make_template_declaration(), scope=Scope.SETUP)
         )
 
         assert violation is not None
@@ -344,6 +344,15 @@ class TestTemplateRules:
         declaration = replace(
             make_template_declaration(),
             modifiers=TemplateModifiers(no_blank=True),
+        )
+
+        assert CompatibleTemplateModifierScopeRule().check(declaration) is None
+
+    def test_modifier_scope_rule_accepts_line_no_text(self) -> None:
+        declaration = replace(
+            make_template_declaration(),
+            scope=Scope.LINE,
+            modifiers=TemplateModifiers(no_text=True),
         )
 
         assert CompatibleTemplateModifierScopeRule().check(declaration) is None

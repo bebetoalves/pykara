@@ -1,8 +1,11 @@
 # coord
 
-Helpers for ASS coordinates.
+Use `coord` when a position calculation needs ASS-style rounding or a
+screen-space offset from an angle and distance.
 
-## `coord.round(value)`
+## Available Functions
+
+### `coord.round(value)`
 
 Round one coordinate the same way ASS rendering normally quantizes it.
 
@@ -10,6 +13,12 @@ Round one coordinate the same way ASS rendering normally quantizes it.
 {\pos(!coord.round($syl_center + 0.5)!,$syl_middle)}
 ```
 
-## See Also
+### `coord.polar(angle, radius, axis=None)`
 
-- [shape](./shape.md)
+Return an offset from an angle and radius using ASS screen coordinates.
+Positive Y points downward, so positive angles move upward. Pass `"x"` or
+`"y"` as `axis` to return only one component.
+
+```ass
+{\pos(!$syl_center + coord.polar(45, 30, "x")!,$syl_middle)}
+```
