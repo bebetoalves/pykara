@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pykara-templater"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "pysubs2>=1.7",
+    "freetype-py; sys_platform != 'win32'",
+    "uharfbuzz; sys_platform != 'win32'",
+    "fonttools; sys_platform != 'win32'",
+    "matplotlib; sys_platform != 'win32'",
+]
+
+[project.scripts]
+pykara = "pykara.interfaces.cli.main:main"
+
+[project.optional-dependencies]
+dev = [
+    "mdformat",
+    "ruff",
+    "pyright",
+    "pytest",
+    "pytest-cov",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pykara"]
+
+[tool.ruff]
+line-length = 80
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "ANN", "S", "B", "A", "C4", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pyright]
+pythonVersion = "3.11"
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+include = ["pykara", "tests"]
+venvPath = "."
+venv = ".venv"
+exclude = [".venv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

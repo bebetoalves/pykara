@@ -1,0 +1,182 @@
+"""Function-level contracts for the execution namespace."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True, slots=True)
+class FunctionSpecification:
+    """Describe one callable or dotted function available to templates."""
+
+    name: str
+    signature: str
+    category: str
+    description: str
+    applicable_to: frozenset[str]
+
+
+FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
+    "retime": FunctionSpecification(
+        "retime",
+        "retime.<target>(start_offset: int = 0, end_offset: int = 0) -> str",
+        "engine",
+        (
+            "Namespace with targets line, preline, postline, syl, presyl, "
+            "postsyl, start2syl, and syl2end. Presets are available as "
+            "retime.<target>.<preset>(start_offset, end_offset)."
+        ),
+        frozenset({"template"}),
+    ),
+    "relayer": FunctionSpecification(
+        "relayer",
+        "relayer(layer: int) -> str",
+        "engine",
+        "Set the output line layer.",
+        frozenset({"template", "code"}),
+    ),
+    "get": FunctionSpecification(
+        "get",
+        "get(key: str, default_value: object = None) -> object",
+        "engine",
+        "Read one value from the shared store.",
+        frozenset({"template", "code"}),
+    ),
+    "set": FunctionSpecification(
+        "set",
+        "set(key: str, value: object) -> object",
+        "engine",
+        "Store one value in the shared store.",
+        frozenset({"template", "code"}),
+    ),
+    "color.ass": FunctionSpecification(
+        "color.ass",
+        "color.ass(r: int, g: int, b: int) -> str",
+        "color",
+        "Build an ASS color string in override format.",
+        frozenset({"template", "code"}),
+    ),
+    "color.alpha": FunctionSpecification(
+        "color.alpha",
+        "color.alpha(a: int) -> str",
+        "color",
+        "Build an ASS alpha string.",
+        frozenset({"template", "code"}),
+    ),
+    "color.interpolate": FunctionSpecification(
+        "color.interpolate",
+        "color.interpolate(t: float, c1: str, c2: str) -> str",
+        "color",
+        "Interpolate between two colors at t in [0, 1].",
+        frozenset({"template", "code"}),
+    ),
+    "math.polar": FunctionSpecification(
+        "math.polar",
+        "math.polar(angle: float, radius: float, axis: str | None = None)",
+        "geometry",
+        "Return screen-space polar coordinates, with positive angles upward.",
+        frozenset({"template", "code"}),
+    ),
+    "coord.round": FunctionSpecification(
+        "coord.round",
+        "coord.round(value: float) -> int",
+        "geometry",
+        "Round one ASS coordinate to the nearest integer.",
+        frozenset({"template", "code"}),
+    ),
+    "shape.rotate": FunctionSpecification(
+        "shape.rotate",
+        "shape.rotate(shape: str, angle: float, origin_x=0, origin_y=0)",
+        "geometry",
+        "Rotate every point in an ASS drawing shape.",
+        frozenset({"template", "code"}),
+    ),
+    "shape.centerpos": FunctionSpecification(
+        "shape.centerpos",
+        "shape.centerpos(shape: str, x: float = 0, y: float = 0) -> str",
+        "geometry",
+        "Move a shape so its bounding-box center is at x,y.",
+        frozenset({"template", "code"}),
+    ),
+    "shape.displace": FunctionSpecification(
+        "shape.displace",
+        "shape.displace(shape: str, dx: float, dy: float) -> str",
+        "geometry",
+        "Displace every point in an ASS drawing shape.",
+        frozenset({"template", "code"}),
+    ),
+    "shape.slider": FunctionSpecification(
+        "shape.slider",
+        "shape.slider(width: float, angle=0, x=0, y=0, height=None) -> str",
+        "geometry",
+        "Build a rotated split clipping shape centered at x,y.",
+        frozenset({"template", "code"}),
+    ),
+    "math.floor": FunctionSpecification(
+        "math.floor",
+        "math.floor(x: float) -> int",
+        "math",
+        "Round down.",
+        frozenset({"template", "code"}),
+    ),
+    "math.ceil": FunctionSpecification(
+        "math.ceil",
+        "math.ceil(x: float) -> int",
+        "math",
+        "Round up.",
+        frozenset({"template", "code"}),
+    ),
+    "math.sqrt": FunctionSpecification(
+        "math.sqrt",
+        "math.sqrt(x: float) -> float",
+        "math",
+        "Return the square root of x.",
+        frozenset({"template", "code"}),
+    ),
+    "math.fabs": FunctionSpecification(
+        "math.fabs",
+        "math.fabs(x: float) -> float",
+        "math",
+        "Return the absolute value of x as a float.",
+        frozenset({"template", "code"}),
+    ),
+    "math.sin": FunctionSpecification(
+        "math.sin",
+        "math.sin(x: float) -> float",
+        "math",
+        "Return the sine of x in radians.",
+        frozenset({"template", "code"}),
+    ),
+    "math.cos": FunctionSpecification(
+        "math.cos",
+        "math.cos(x: float) -> float",
+        "math",
+        "Return the cosine of x in radians.",
+        frozenset({"template", "code"}),
+    ),
+    "math.radians": FunctionSpecification(
+        "math.radians",
+        "math.radians(x: float) -> float",
+        "math",
+        "Convert an angle from degrees to radians.",
+        frozenset({"template", "code"}),
+    ),
+    "random.random": FunctionSpecification(
+        "random.random",
+        "random.random() -> float",
+        "random",
+        "Return the next pseudo-random float in the range [0.0, 1.0).",
+        frozenset({"template", "code"}),
+    ),
+    "random.randint": FunctionSpecification(
+        "random.randint",
+        "random.randint(a: int, b: int) -> int",
+        "random",
+        "Return a pseudo-random integer N such that a <= N <= b.",
+        frozenset({"template", "code"}),
+    ),
+}
+
+EXPOSED_MODULES: frozenset[str] = frozenset(
+    {"color", "coord", "math", "random", "shape"}
+)

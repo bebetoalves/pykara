@@ -1,0 +1,74 @@
+"""Declarative metadata for supported template modifiers."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from pykara.declaration import Scope
+
+
+@dataclass(frozen=True, slots=True)
+class ModifierSpecification:
+    """Describe one modifier keyword independent from its implementation."""
+
+    keyword: str
+    aliases: tuple[str, ...]
+    takes_argument: bool
+    applicable_to: frozenset[str]
+    allowed_scopes: frozenset[Scope]
+    description: str
+
+
+TEMPLATE_SCOPES = frozenset({Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR})
+
+
+MODIFIER_SPECIFICATIONS: dict[str, ModifierSpecification] = {
+    "loop": ModifierSpecification(
+        keyword="loop",
+        aliases=(),
+        takes_argument=True,
+        applicable_to=frozenset({"template"}),
+        allowed_scopes=TEMPLATE_SCOPES,
+        description="Declare one named or unnamed loop for template iteration.",
+    ),
+    "no_blank": ModifierSpecification(
+        keyword="no_blank",
+        aliases=(),
+        takes_argument=False,
+        applicable_to=frozenset({"template"}),
+        allowed_scopes=frozenset({Scope.WORD, Scope.SYL, Scope.CHAR}),
+        description="Skip blank syllables or characters.",
+    ),
+    "no_text": ModifierSpecification(
+        keyword="no_text",
+        aliases=(),
+        takes_argument=False,
+        applicable_to=frozenset({"template"}),
+        allowed_scopes=frozenset({Scope.WORD, Scope.SYL, Scope.CHAR}),
+        description="Do not append the source syllable text to the output.",
+    ),
+    "fx": ModifierSpecification(
+        keyword="fx",
+        aliases=(),
+        takes_argument=True,
+        applicable_to=frozenset({"template"}),
+        allowed_scopes=frozenset({Scope.SYL}),
+        description="Filter by the requested inline-fx tag.",
+    ),
+    "when": ModifierSpecification(
+        keyword="when",
+        aliases=(),
+        takes_argument=True,
+        applicable_to=frozenset({"template"}),
+        allowed_scopes=TEMPLATE_SCOPES,
+        description="Apply the template only when the condition is true.",
+    ),
+    "unless": ModifierSpecification(
+        keyword="unless",
+        aliases=(),
+        takes_argument=True,
+        applicable_to=frozenset({"template"}),
+        allowed_scopes=TEMPLATE_SCOPES,
+        description="Apply the template only when the condition is false.",
+    ),
+}
