@@ -71,7 +71,7 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
             ") -> str"
         ),
         "color",
-        "Interpolate between two colors at t in [0, 1].",
+        "Interpolate between two colors at progress in [0, 1].",
         frozenset({"template", "code"}),
     ),
     "coord.polar": FunctionSpecification(
@@ -174,12 +174,9 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
     ),
     "random.randint": FunctionSpecification(
         "random.randint",
-        "random.randint(min_value: int, max_value: int) -> int",
+        "random.randint(a: int, b: int) -> int",
         "random",
-        (
-            "Return a pseudo-random integer N such that "
-            "min_value <= N <= max_value."
-        ),
+        "Return a pseudo-random integer N such that a <= N <= b.",
         frozenset({"template", "code"}),
     ),
 }

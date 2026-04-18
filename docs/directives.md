@@ -1,7 +1,7 @@
 # Pykara Directive System
 
 Pykara's directive system controls karaoke execution through **comment**
-events in your ASS file. The `Effect` field selects a directive and its
+events in your ASS file. The `Effect` field selects a directive type and
 scope; the `Text` field carries the template body or Python code.
 
 ## Quick Reference
@@ -18,7 +18,7 @@ scope; the `Text` field carries the template body or Python code.
 - **[Directive Types](./directives/types.md)** — `template` and `code`.
 - **[Scopes](./directives/scopes.md)** — execution frequency and scope rules.
 - **[Variables](./directives/variables.md)** — every `$variable` exposed to templates.
-- **[Objects](./directives/objects.md)** — object-style access inside `!expressions!`.
+- **[Objects](./directives/objects.md)** — object-style access inside `!expr!`.
 - **[Modifiers](./directives/modifiers.md)** — template modifier keywords.
 
 ### Scopes
@@ -38,7 +38,7 @@ Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template syl,{\pos($syl_center,$
 ```
 
 - `Default` — Style name.
-- `template syl` — Directive keyword and scope (plus optional modifiers).
+- `template syl` — Directive type and scope (plus optional modifiers).
 - `{\pos($syl_center,$syl_middle)}` — Template body.
 
 Only source lines with `Effect=karaoke` are processed. This applies

@@ -1,7 +1,7 @@
 # global
 
-Functions without a namespace that are available in `template` contexts
-and in `code line`, `code word`, or `code syl`.
+Use these non-namespaced functions to share temporary values between
+templates and scoped `code` directives.
 
 ## Available Functions
 

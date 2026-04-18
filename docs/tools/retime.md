@@ -1,6 +1,7 @@
 # retime
 
-Retime the generated line with an explicit target.
+Use `retime` to choose which part of the source line should define the
+generated line's timing.
 
 ## Usage
 
@@ -20,20 +21,17 @@ Each template evaluation accepts at most one `retime` call.
 ## Timeline
 
 ```text
-  0                  s0              s1                D
-  |                  |               |                 |
-  +------------------+---------------+-----------------+
-  ^                  ^               ^                 ^
-  preline            presyl          postsyl           postline
+line.start        syl.start       syl.end         line.end
+|                 |               |               |
++-----------------+---------------+---------------+
+^ preline         ^ presyl        ^ postsyl       ^ postline
 
-  |<----------------------- line ---------------------->|
-
-  |<---- start2syl ---->|
-
-                     |<------ syl ------>|
-
-                                       |<-- syl2end -->|
+|<----------------------------------------------->| line
+|<-- start2syl -->|<---- syl ---->|<-- syl2end -->|
 ```
+
+The diagram shows the base timing before `start_offset` and `end_offset`
+are applied.
 
 ## Available Functions
 
@@ -61,16 +59,13 @@ character's parent syllable.
 
 ### Presets
 
-Presets apply a stagger to each item in the current scope: words in
-`template word`, syllables in `template syl`, and characters in
-`template char`.
+Presets spread the offsets across repeated items. In `template syl`,
+for example, `retime.line.ltr(-300, 0)` makes earlier syllables start
+further before the line and later syllables closer to the line start.
 
-Use line targets (`line`, `preline`, `postline`) to stagger across the
-whole line. Use syllable targets (`syl`, `presyl`, `postsyl`,
-`start2syl`, `syl2end`) only when the template has an active syllable.
-
-Presets are invalid in `template line`. Preset collections with zero or
-one element are runtime errors.
+Presets need at least two items to spread across, so they are not valid
+in `template line`. `syl`, `presyl`, and `postsyl` presets need
+`template char`; `start2syl` and `syl2end` presets need `template syl`.
 
 Available presets:
 

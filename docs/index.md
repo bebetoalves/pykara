@@ -41,7 +41,7 @@ pykara input.ass output.ass --seed 42
 - [Types](./directives/types.md) — Template and code directives.
 - [Scopes](./directives/scopes.md) — Setup, line, word, syllable, and character scopes.
 - [Variables](./directives/variables.md) — Complete `$variable` reference.
-- [Objects](./directives/objects.md) — Properties available in `!expressions!`.
+- [Objects](./directives/objects.md) — Properties available in `!expr!`.
 - [Modifiers](./directives/modifiers.md) — Template modifier keywords.
 
 ### Scopes
@@ -54,14 +54,14 @@ pykara input.ass output.ass --seed 42
 
 ### Tools
 
-- [retime](./tools/retime.md) — Retiming targets and presets for generated lines.
-- [layer](./tools/layer.md) — Layer helpers for generated lines.
-- [color](./tools/color.md) — Color conversion and interpolation helpers.
-- [global](./tools/global.md) — Shared non-namespaced helper functions.
-- [coord](./tools/coord.md) — Coordinate helpers for ASS rendering.
-- [shape](./tools/shape.md) — ASS drawing shape helpers.
-- [math](./tools/math.md) — Selected math helpers available at runtime.
-- [random](./tools/random.md) — Seeded pseudo-random helpers.
+- [retime](./tools/retime.md) — Choose source timing for generated lines.
+- [layer](./tools/layer.md) — Change generated line layers while rendering.
+- [color](./tools/color.md) — Build ASS colors, alpha values, and blends.
+- [global](./tools/global.md) — Share temporary values between templates and scoped code.
+- [coord](./tools/coord.md) — Round coordinates or calculate screen-space offsets.
+- [shape](./tools/shape.md) — Move, rotate, center, or generate ASS drawings.
+- [math](./tools/math.md) — Run numeric calculations inside `!expr!` and code.
+- [random](./tools/random.md) — Add pseudo-random variation to generated lines.
 
 ## License
 

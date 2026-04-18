@@ -21,15 +21,19 @@ class AssColorFunction:
     def __call__(
         self,
         env: object,
-        red_value: int,
-        green_value: int,
-        blue_value: int,
+        red: int,
+        green: int,
+        blue: int,
     ) -> str:
         del env
-        red = _clamp_byte(red_value)
-        green = _clamp_byte(green_value)
-        blue = _clamp_byte(blue_value)
-        return f"&H00{blue:02X}{green:02X}{red:02X}&"
+        red_component = _clamp_byte(red)
+        green_component = _clamp_byte(green)
+        blue_component = _clamp_byte(blue)
+        return (
+            f"&H00{blue_component:02X}"
+            f"{green_component:02X}"
+            f"{red_component:02X}&"
+        )
 
 
 class AssAlphaFunction:
@@ -39,10 +43,10 @@ class AssAlphaFunction:
     aliases: ClassVar[tuple[str, ...]] = ()
     applicable_to: ClassVar[frozenset[str]] = frozenset({"template", "code"})
 
-    def __call__(self, env: object, alpha_value: int) -> str:
+    def __call__(self, env: object, alpha: int) -> str:
         del env
-        alpha = _clamp_byte(alpha_value)
-        return f"&H{alpha:02X}&"
+        alpha_component = _clamp_byte(alpha)
+        return f"&H{alpha_component:02X}&"
 
 
 class InterpolateColorFunction:

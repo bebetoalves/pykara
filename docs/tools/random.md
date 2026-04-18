@@ -1,7 +1,7 @@
 # random
 
-A selected subset of Python's `random` module is available. Output is
-deterministic when `--seed` is passed to the CLI.
+Use `random` to add pseudo-random variation to generated lines, such as
+jitter, color choices, or rotation.
 
 ## Available Functions
 
@@ -9,9 +9,9 @@ deterministic when `--seed` is passed to the CLI.
 
 Return a uniform float in `[0.0, 1.0)`.
 
-### `random.randint(min_value, max_value)`
+### `random.randint(a, b)`
 
-Return a uniform integer `N` such that `min_value <= N <= max_value`.
+Return a uniform integer `N` such that `a <= N <= b`.
 
 ## Example
 

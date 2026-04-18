@@ -1,6 +1,7 @@
 # shape
 
-Helpers for ASS drawing shapes.
+Use `shape` to move, rotate, center, or generate ASS drawing shapes for
+`\p` drawings and clipping masks.
 
 ## Available Functions
 

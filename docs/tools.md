@@ -7,11 +7,11 @@ Tools are runtime helpers available inside template expressions
 
 | Tool | Description |
 |---------------------------------|----------------------------------|
-| [`retime`](./tools/retime.md) | Retime the generated line. |
-| [`layer`](./tools/layer.md) | Change the output layer. |
-| [`color`](./tools/color.md) | Build ASS colors and alphas. |
-| [`coord`](./tools/coord.md) | Round ASS coordinates. |
-| [`shape`](./tools/shape.md) | Transform ASS drawing shapes. |
-| [`global`](./tools/global.md) | Shared non-namespaced functions. |
-| [`math`](./tools/math.md) | Selected math functions. |
-| [`random`](./tools/random.md) | Seeded random numbers. |
+| [`retime`](./tools/retime.md) | Choose which source timing range a generated line uses. |
+| [`layer`](./tools/layer.md) | Change the generated line layer while rendering. |
+| [`color`](./tools/color.md) | Build ASS colors, alpha values, and color blends. |
+| [`coord`](./tools/coord.md) | Round coordinates or calculate screen-space offsets. |
+| [`shape`](./tools/shape.md) | Move, rotate, center, or generate ASS drawing shapes. |
+| [`global`](./tools/global.md) | Share temporary values between templates and scoped code. |
+| [`math`](./tools/math.md) | Run numeric calculations inside `!expr!` and code. |
+| [`random`](./tools/random.md) | Add pseudo-random variation to generated lines. |

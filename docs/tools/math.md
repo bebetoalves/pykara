@@ -1,6 +1,7 @@
 # math
 
-A selected subset of Python's `math` module is available.
+Use `math` for numeric calculations inside `!expr!` and `code`
+directives.
 
 ## Available Functions
 

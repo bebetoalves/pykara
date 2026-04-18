@@ -10,7 +10,7 @@ Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code setup,main = color.rgb_to_a
 ## Purpose
 
 - Pre-compute values every line will use.
-- Store palettes or other shared data.
+- Define palettes or other shared data.
 
 ## What's Available
 

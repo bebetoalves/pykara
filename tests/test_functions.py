@@ -362,14 +362,27 @@ class TestDefaultRegistry:
         assert isinstance(namespace["coord"], SimpleNamespace)
         assert isinstance(namespace["shape"], SimpleNamespace)
         assert namespace["color"].rgb_to_ass(255, 128, 0) == "&H000080FF&"
+        assert (
+            namespace["color"].rgb_to_ass(red=255, green=128, blue=0)
+            == "&H000080FF&"
+        )
         assert namespace["layer"].set(3) is None
         assert env.line.layer == 3
         assert namespace["color"].alpha(255) == "&HFF&"
+        assert namespace["color"].alpha(alpha=255) == "&HFF&"
         assert (
             namespace["color"].interpolate(
                 0.5,
                 "&H00000000",
                 "&HFFFFFF&",
+            )
+            == "&H00808080&"
+        )
+        assert (
+            namespace["color"].interpolate(
+                progress=0.5,
+                start_color="&H00000000",
+                end_color="&HFFFFFF&",
             )
             == "&H00808080&"
         )

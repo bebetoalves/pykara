@@ -1,6 +1,6 @@
 # Objects
 
-Inside `!expressions!`, runtime data is exposed through objects.
+Inside `!expr!`, runtime data is exposed through objects.
 
 ## Available Objects
 

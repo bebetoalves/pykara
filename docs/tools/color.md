@@ -1,6 +1,7 @@
 # color
 
-Helpers for building and interpolating ASS colors.
+Use `color` to build ASS override color strings from RGB values, alpha
+values, or blends between two colors.
 
 ## Available Functions
 

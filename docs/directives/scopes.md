@@ -27,5 +27,5 @@ Each nested scope sees its own variables plus those of outer scopes.
 | `char` | Everything from `syl`, plus `char_*`. |
 
 For the complete variable list, see [Variables](./variables.md). For
-object properties available inside `!expressions!`, see
+object properties available inside `!expr!`, see
 [Objects](./objects.md).
