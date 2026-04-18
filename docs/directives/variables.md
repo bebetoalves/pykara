@@ -10,8 +10,6 @@ Template variables are accessed with `$name`.
 |----------|-------------|
 | `layer` | Output layer of the generated line. |
 | `actor` | Actor of the generated line. |
-| `loop_i` | Current loop index. Available only while a loop is active. |
-| `loop_n` | Total loop count. Available only while a loop is active. |
 
 ### `line_*`
 
@@ -21,7 +19,7 @@ Template variables are accessed with `$name`.
 | `line_end` | Line end time in ms. |
 | `line_dur` | Line duration in ms. |
 | `line_mid` | Line midpoint in ms. |
-| `line_i` | Zero-based karaoke line index. |
+| `line_i` | Karaoke line index. |
 | `line_left` | Left edge. |
 | `line_center` | Horizontal center. |
 | `line_right` | Right edge. |
@@ -43,7 +41,7 @@ Template variables are accessed with `$name`.
 | `word_kdur` | Word duration in centiseconds. |
 | `word_mid` | Word midpoint in ms. |
 | `word_n` | Total word count in the line. |
-| `word_i` | Zero-based word index. |
+| `word_i` | Word index. |
 | `word_left` | Left edge. |
 | `word_center` | Horizontal center. |
 | `word_right` | Right edge. |
@@ -65,7 +63,7 @@ Template variables are accessed with `$name`.
 | `syl_kdur` | Syllable duration in centiseconds. |
 | `syl_mid` | Syllable midpoint in ms. |
 | `syl_n` | Total syllable count in the line. |
-| `syl_i` | Zero-based syllable index. |
+| `syl_i` | Syllable index. |
 | `syl_left` | Left edge. |
 | `syl_center` | Horizontal center. |
 | `syl_right` | Right edge. |
@@ -81,7 +79,7 @@ Template variables are accessed with `$name`.
 
 | Variable | Description |
 |----------|-------------|
-| `char_i` | Zero-based character index inside the syllable. |
+| `char_i` | Character index inside the syllable. |
 | `char_n` | Total character count inside the syllable. |
 | `char_left` | Left edge. |
 | `char_center` | Horizontal center. |

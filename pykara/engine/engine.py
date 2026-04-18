@@ -105,7 +105,7 @@ class Engine:
             metadata=meta,
             rng=random.Random(self._rng_seed),  # noqa: S311
         )
-        for declaration in declarations.init:
+        for declaration in declarations.setup:
             self._execute_code(declaration, env)
 
         output_events: list[Event] = []
@@ -230,6 +230,7 @@ class Engine:
         env: Environment,
     ) -> None:
         env.declaration = "code"
+        env.active_code_scope = declaration.scope
         self._code_runner.run(declaration.body.source, env)
 
     def _render_line_template(
@@ -239,6 +240,11 @@ class Engine:
         env: Environment,
         descendants: Callable[[], list[Event]] | None,
     ) -> list[Event]:
+        if (
+            declaration.modifiers.no_blank
+            and self._strip_karaoke_text(source_event.text).strip() == ""
+        ):
+            return []
         return self._loop_render(
             declaration,
             env,

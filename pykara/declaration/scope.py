@@ -8,7 +8,7 @@ from enum import StrEnum
 class Scope(StrEnum):
     """Execution scope vocabulary shared by template and code declarations."""
 
-    INIT = "init"
+    SETUP = "setup"
     LINE = "line"
     WORD = "word"
     SYL = "syl"

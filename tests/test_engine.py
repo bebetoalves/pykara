@@ -247,14 +247,14 @@ class TestCodeRunner:
 
 
 class TestEngineIntegration:
-    def test_applies_code_init_line_syl_and_char_templates(self) -> None:
+    def test_applies_code_setup_line_syl_and_char_templates(self) -> None:
         engine = build_engine()
         event = make_event()
         declarations = ParsedDeclarations(
-            init=[
+            setup=[
                 CodeDeclaration(
                     body=CodeBody("prefix = 'P:'"),
-                    scope=Scope.INIT,
+                    scope=Scope.SETUP,
                 )
             ],
             line=[
@@ -301,6 +301,25 @@ class TestEngineIntegration:
             "C2-975:l",
         ]
         assert all(result.effect == "fx" for result in results)
+
+    def test_code_setup_does_not_expose_store_functions(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody("set('main', 1)"),
+                    scope=Scope.SETUP,
+                )
+            ]
+        )
+
+        with pytest.raises(TemplateRuntimeError):
+            engine.apply(
+                [make_event()],
+                declarations,
+                Metadata(res_x=1920, res_y=1080),
+                {"Default": make_style()},
+            )
 
     def test_applies_word_templates_grouped_by_spaces(self) -> None:
         engine = build_engine()
@@ -657,13 +676,13 @@ class TestEngineIntegration:
             "1000:ready",
         ]
 
-    def test_init_code_functions_do_not_gain_line_namespace_later(self) -> None:
+    def test_setup_code_does_not_gain_line_namespace_later(self) -> None:
         engine = build_engine()
         declarations = ParsedDeclarations(
-            init=[
+            setup=[
                 CodeDeclaration(
                     body=CodeBody("def describe(): return line.start"),
-                    scope=Scope.INIT,
+                    scope=Scope.SETUP,
                 )
             ],
             line=[
@@ -922,6 +941,41 @@ class TestEngineIntegration:
         )
 
         assert [result.text for result in results] == ["Xgo"]
+
+    def test_honors_line_no_blank_modifier(self) -> None:
+        engine = build_engine()
+        blank_event = Event(
+            text=r"{\k20}  ",
+            effect="karaoke",
+            style="Default",
+            layer=0,
+            start_time=1000,
+            end_time=1200,
+            comment=False,
+            actor="Singer",
+            margin_l=0,
+            margin_r=0,
+            margin_t=0,
+            margin_b=0,
+        )
+        declarations = ParsedDeclarations(
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("X"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(no_blank=True),
+                )
+            ]
+        )
+
+        results = engine.apply(
+            [blank_event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert results == []
 
     def test_honors_fx_modifier(self) -> None:
         engine = build_engine()

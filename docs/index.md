@@ -39,14 +39,14 @@ pykara input.ass output.ass --seed 42
 ### Directives
 
 - [Types](./directives/types.md) — Template and code directives.
-- [Scopes](./directives/scopes.md) — Init, line, word, syllable, and character scopes.
+- [Scopes](./directives/scopes.md) — Setup, line, word, syllable, and character scopes.
 - [Variables](./directives/variables.md) — Complete `$variable` reference.
 - [Objects](./directives/objects.md) — Properties available in `!expressions!`.
 - [Modifiers](./directives/modifiers.md) — Template modifier keywords.
 
 ### Scopes
 
-- [Init Scope](./directives/init-scope.md) — One-time setup before any karaoke line runs.
+- [Setup Scope](./directives/setup-scope.md) — One-time setup before any karaoke line runs.
 - [Line Scope](./directives/line-scope.md) — One execution per karaoke line.
 - [Word Scope](./directives/word-scope.md) — One execution per visible word.
 - [Syllable Scope](./directives/syllable-scope.md) — One execution per karaoke syllable.

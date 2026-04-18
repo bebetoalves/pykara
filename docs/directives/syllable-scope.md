@@ -34,6 +34,13 @@ Pulse each syllable during its own duration:
 Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template syl,!retime.syl()!{\pos($syl_center,$syl_middle)\t(\fscx120\fscy120)}
 ```
 
+Prepare one value per syllable with `code syl`:
+
+```ass
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code syl,current_color = color.rgb_to_ass(255, 120 + syl.i * 20, 80)
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template syl,{\pos($syl_center,$syl_middle)\1c!current_color!}
+```
+
 Only run on syllables tagged `glow`:
 
 ```ass

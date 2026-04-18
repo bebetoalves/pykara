@@ -17,8 +17,8 @@ class ScopeSpecification:
 
 
 SCOPE_SPECIFICATIONS: dict[Scope, ScopeSpecification] = {
-    Scope.INIT: ScopeSpecification(
-        Scope.INIT,
+    Scope.SETUP: ScopeSpecification(
+        Scope.SETUP,
         "Executed once before processing any karaoke line.",
         frozenset(),
     ),

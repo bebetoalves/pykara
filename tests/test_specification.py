@@ -19,8 +19,6 @@ from pykara.specification import (
 EXPECTED_TEMPLATE_VARIABLES = {
     "layer",
     "actor",
-    "loop_i",
-    "loop_n",
 }
 
 EXPECTED_LINE_VARIABLES = {
@@ -104,7 +102,6 @@ EXPECTED_MATH_FUNCTIONS = {
     "math.sin",
     "math.cos",
     "math.radians",
-    "math.polar",
 }
 
 EXPECTED_COLOR_FUNCTIONS = {
@@ -115,6 +112,7 @@ EXPECTED_COLOR_FUNCTIONS = {
 
 EXPECTED_COORD_FUNCTIONS = {
     "coord.round",
+    "coord.polar",
 }
 
 EXPECTED_SHAPE_FUNCTIONS = {
@@ -253,7 +251,7 @@ class TestDeclarations:
 
     def test_code_scopes_match_contract(self) -> None:
         assert CODE_DECLARATION.allowed_scopes == frozenset(
-            {Scope.INIT, Scope.LINE, Scope.WORD, Scope.SYL}
+            {Scope.SETUP, Scope.LINE, Scope.WORD, Scope.SYL}
         )
 
 

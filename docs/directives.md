@@ -9,7 +9,7 @@ scope; the `Text` field carries the template body or Python code.
 | Directive | Scopes | Description |
 |--------------------|-------------------------------|----------------------------------------|
 | `template <scope>` | `line`, `word`, `syl`, `char` | Generate effect lines from a template. |
-| `code <scope>` | `init`, `line`, `word`, `syl` | Run Python code in the current scope. |
+| `code <scope>` | `setup`, `line`, `word`, `syl` | Run Python code in the current scope. |
 
 ## Documentation
 
@@ -23,7 +23,7 @@ scope; the `Text` field carries the template body or Python code.
 
 ### Scopes
 
-- **[Init Scope](./directives/init-scope.md)**
+- **[Setup Scope](./directives/setup-scope.md)**
 - **[Line Scope](./directives/line-scope.md)**
 - **[Word Scope](./directives/word-scope.md)**
 - **[Syllable Scope](./directives/syllable-scope.md)**

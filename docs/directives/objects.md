@@ -17,7 +17,7 @@ Inside `!expressions!`, runtime data is exposed through objects.
 | `end` | End time in ms. |
 | `dur` | Duration in ms. |
 | `mid` | Midpoint in ms. |
-| `i` | Zero-based karaoke line index. |
+| `i` | Karaoke line index. |
 | `left` | Left edge. |
 | `center` | Horizontal center. |
 | `right` | Right edge. |
@@ -42,7 +42,7 @@ Inside `!expressions!`, runtime data is exposed through objects.
 | `kdur` | Duration in centiseconds. |
 | `mid` | Midpoint in ms. |
 | `n` | Total word count in the line. |
-| `i` | Zero-based word index. |
+| `i` | Word index. |
 | `left` | Left edge. |
 | `center` | Horizontal center. |
 | `right` | Right edge. |
@@ -66,7 +66,7 @@ Inside `!expressions!`, runtime data is exposed through objects.
 | `kdur` | Duration in centiseconds. |
 | `mid` | Midpoint in ms. |
 | `n` | Total syllable count in the line. |
-| `i` | Zero-based syllable index. |
+| `i` | Syllable index. |
 | `left` | Left edge. |
 | `center` | Horizontal center. |
 | `right` | Right edge. |
@@ -86,7 +86,7 @@ Inside `!expressions!`, runtime data is exposed through objects.
 |----------|-------------|
 | `text` | Visible character text. |
 | `trimmed_text` | Character text without outer whitespace. |
-| `i` | Zero-based character index in the syllable. |
+| `i` | Character index in the syllable. |
 | `n` | Total character count in the syllable. |
 | `left` | Left edge. |
 | `center` | Horizontal center. |

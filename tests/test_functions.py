@@ -344,9 +344,9 @@ class TestFunctionRegistry:
 
         namespace = registry.build_namespace(object(), "template")
 
-        assert "math.polar" not in namespace
-        assert isinstance(namespace["math"], SimpleNamespace)
-        assert namespace["math"].polar(0, 30, "x") == 30
+        assert "coord.polar" not in namespace
+        assert isinstance(namespace["coord"], SimpleNamespace)
+        assert namespace["coord"].polar(0, 30, "x") == 30
 
 
 class TestDefaultRegistry:
@@ -359,7 +359,6 @@ class TestDefaultRegistry:
         assert "get" in namespace
         assert "set" in namespace
         assert isinstance(namespace["color"], SimpleNamespace)
-        assert isinstance(namespace["math"], SimpleNamespace)
         assert isinstance(namespace["coord"], SimpleNamespace)
         assert isinstance(namespace["shape"], SimpleNamespace)
         assert namespace["color"].rgb_to_ass(255, 128, 0) == "&H000080FF&"
@@ -374,7 +373,7 @@ class TestDefaultRegistry:
             )
             == "&H00808080&"
         )
-        assert namespace["math"].polar(0, 30, "x") == 30
+        assert namespace["coord"].polar(0, 30, "x") == 30
         assert namespace["coord"].round(3.5) == 4
         assert namespace["shape"].rotate("m 0 0 l 10 0", 90) == (
             "m 0 0 l 0 -10"

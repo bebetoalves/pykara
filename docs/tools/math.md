@@ -32,13 +32,8 @@ Return the cosine of `x`, in radians.
 
 Convert degrees to radians.
 
-### `math.polar(angle, radius, axis=None)`
-
-Return screen-space polar coordinates.
-
 ## Example
 
 ```ass
 {\frz!math.sin($syl_i) * 10!}
-{\pos(!$syl_center + math.polar(45, 30, "x")!,$syl_middle)}
 ```

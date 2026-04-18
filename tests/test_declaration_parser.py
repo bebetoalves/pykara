@@ -66,9 +66,9 @@ class TestDeclarationParser:
                     style="StyleB",
                 ),
                 make_event(
-                    effect="code init",
+                    effect="code setup",
                     text="state = 1",
-                    style="StyleInit",
+                    style="StyleSetup",
                 ),
                 make_event(
                     effect="code syl",
@@ -93,7 +93,7 @@ class TestDeclarationParser:
         assert parsed.active_styles == {
             "StyleA",
             "StyleB",
-            "StyleInit",
+            "StyleSetup",
             "StyleCode",
         }
 
@@ -101,7 +101,7 @@ class TestDeclarationParser:
         syl_template = parsed.syl[0]
         syl_code = parsed.syl[1]
         char_declaration = parsed.char[0]
-        init_declaration = parsed.init[0]
+        setup_declaration = parsed.setup[0]
 
         assert isinstance(line_declaration, TemplateDeclaration)
         assert line_declaration.scope is Scope.LINE
@@ -118,9 +118,9 @@ class TestDeclarationParser:
         assert char_declaration.modifiers.no_blank is True
         assert char_declaration.modifiers.no_text is True
 
-        assert isinstance(init_declaration, CodeDeclaration)
-        assert init_declaration.scope is Scope.INIT
-        assert init_declaration.body.source == "state = 1"
+        assert isinstance(setup_declaration, CodeDeclaration)
+        assert setup_declaration.scope is Scope.SETUP
+        assert setup_declaration.body.source == "state = 1"
 
         assert isinstance(syl_code, CodeDeclaration)
         assert syl_code.scope is Scope.SYL
@@ -235,9 +235,9 @@ class TestDeclarationParser:
         parser = self.build_parser()
 
         with pytest.raises(DeclarativeParseError) as error_info:
-            parser.parse([make_event(effect="code init extra", text="body")])
+            parser.parse([make_event(effect="code setup extra", text="body")])
 
-        assert error_info.value.effect_field == "code init extra"
+        assert error_info.value.effect_field == "code setup extra"
         assert "Unexpected token after code scope" in str(error_info.value)
 
     def test_parse_rejects_scope_not_allowed_for_declaration(self) -> None:

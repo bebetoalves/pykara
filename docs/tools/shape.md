@@ -20,9 +20,9 @@ Move a shape so its bounding-box center sits at `x,y`.
 {\p1}!shape.centerpos("m 0 0 l 10 20", $syl_center, $syl_middle)!{\p0}
 ```
 
-### `shape.displace(shape, dx, dy)`
+### `shape.displace(shape, offset_x, offset_y)`
 
-Move every point in a drawing shape by `dx,dy`.
+Move every point in a drawing shape by `offset_x,offset_y`.
 
 ```ass
 {\p1}!shape.displace("m 0 0 l 10 0", 5, 8)!{\p0}

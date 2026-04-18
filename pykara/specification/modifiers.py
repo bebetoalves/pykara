@@ -36,8 +36,10 @@ MODIFIER_SPECIFICATIONS: dict[str, ModifierSpecification] = {
         aliases=(),
         takes_argument=False,
         applicable_to=frozenset({"template"}),
-        allowed_scopes=frozenset({Scope.WORD, Scope.SYL, Scope.CHAR}),
-        description="Skip blank words, syllables, or characters.",
+        allowed_scopes=frozenset(
+            {Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR}
+        ),
+        description="Skip blank lines, words, syllables, or characters.",
     ),
     "no_text": ModifierSpecification(
         keyword="no_text",

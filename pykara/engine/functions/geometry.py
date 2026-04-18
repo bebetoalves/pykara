@@ -68,18 +68,18 @@ def _rotate_shape(
 
 def _center_shape(shape: str, x: float = 0.0, y: float = 0.0) -> str:
     min_x, min_y, max_x, max_y = _shape_bounds(shape)
-    dx = x - min_x - (max_x - min_x) / 2
-    dy = y - min_y - (max_y - min_y) / 2
+    offset_x = x - min_x - (max_x - min_x) / 2
+    offset_y = y - min_y - (max_y - min_y) / 2
     return _map_shape_points(
         shape,
-        lambda point_x, point_y: (point_x + dx, point_y + dy),
+        lambda point_x, point_y: (point_x + offset_x, point_y + offset_y),
     )
 
 
 class PolarFunction:
     """Return screen-space polar coordinates."""
 
-    name: ClassVar[str] = "math.polar"
+    name: ClassVar[str] = "coord.polar"
     aliases: ClassVar[tuple[str, ...]] = ()
     applicable_to: ClassVar[frozenset[str]] = frozenset({"template", "code"})
 
@@ -142,11 +142,17 @@ class ShapeDisplaceFunction:
         self,
         env: object,
         shape: str,
-        dx: float,
-        dy: float,
+        offset_x: float,
+        offset_y: float,
     ) -> str:
         del env
-        return _map_shape_points(shape, lambda x, y: (x + dx, y + dy))
+        return _map_shape_points(
+            shape,
+            lambda point_x, point_y: (
+                point_x + offset_x,
+                point_y + offset_y,
+            ),
+        )
 
 
 class ShapeCenterposFunction:

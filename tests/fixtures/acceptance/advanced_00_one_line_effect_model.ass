@@ -15,7 +15,7 @@ Style: ModelBottom,Noto Sans,56,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Comment: 0,0:00:00.00,0:00:00.00,ModelTop,,0,0,0,code init all,stagger = 34; lead_in = -150; lead_out = -50
+Comment: 0,0:00:00.00,0:00:00.00,ModelTop,,0,0,0,code setup all,stagger = 34; lead_in = -150; lead_out = -50
 Comment: 0,0:00:00.00,0:00:00.00,ModelTop,,0,0,0,,
 Comment: 0,0:00:00.00,0:00:00.00,ModelTop,,0,0,0,template syl all no_blank,!retime.line(lead_in,lead_out+$syl_i*stagger)!{\an5\pos(!$syl_center!,!$syl_middle!)\t(!$syl_i*stagger!,!200+$syl_i*stagger!,{entrada escalonada da silaba})\t(!$syl_start!,!$syl_end!,{enfase durante a silaba cantada})\t(!line.dur-400!,!line.dur!,{saida compartilhada da linha})}
 Comment: 0,0:00:00.00,0:00:00.00,ModelTop,,0,0,0,,

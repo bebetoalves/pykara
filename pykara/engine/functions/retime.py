@@ -440,7 +440,7 @@ def _implicit_collection(
         current = _require_element_index(env.syl, "syl")
         return env.retime_line_syls, current
 
-    raise EngineError(f"retime.{target} has no implicit collection here")
+    raise EngineError(f"retime.{target} has no preset collection here")
 
 
 def _require_element_index(

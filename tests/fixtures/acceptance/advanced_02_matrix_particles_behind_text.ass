@@ -15,7 +15,7 @@ Style: Matrix,Noto Sans,58,&H002D5314,&H000000FF,&H00091405,&H90000000,0,0,0,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Comment: 0,0:00:00.00,0:00:00.00,Matrix,,0,0,0,code init all,particles_per_char = 4; spread_x = 58; spread_y = 46; drift_x = 6; drift_y = 14; particle_life_min = 1100; particle_life_max = 1800
+Comment: 0,0:00:00.00,0:00:00.00,Matrix,,0,0,0,code setup all,particles_per_char = 4; spread_x = 58; spread_y = 46; drift_x = 6; drift_y = 14; particle_life_min = 1100; particle_life_max = 1800
 Comment: 1,0:00:00.00,0:00:00.00,Matrix,,0,0,0,template line all,!layer.set(1)!!retime.line(0,0)!{\an5\pos($line_center,$line_middle)\1c&H002D5314&\3c&H00091405&\bord3\shad0\fad(260,420)}
 Comment: 0,0:00:00.00,0:00:00.00,Matrix,,0,0,0,template char all loop bit (particles_per_char) no_blank no_text,!layer.set(0)!!retime.line(set("particle_start", random.randint(0, math.floor(line.dur - particle_life_max - 100))),get("particle_start") - line.dur + random.randint(particle_life_min, particle_life_max))!{\an5\fs20\bord0\shad0\1c&H002D5314&\alpha&H00&\move(!set("px", char.center + random.randint(-spread_x, spread_x))!,!set("py", char.middle + random.randint(-spread_y, spread_y))!,!get("px") + random.randint(-drift_x, drift_x)!,!get("py") + random.randint(-drift_y, drift_y)!)\fad(260,420)}!random.randint(0, 1)!
 Dialogue: 1,0:00:01.00,0:00:05.80,Matrix,,0,0,0,karaoke,{\k45}MATRIX {\k35}SIGNAL {\k42}BEHIND {\k55}TEXT

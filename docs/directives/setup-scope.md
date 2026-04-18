@@ -1,10 +1,10 @@
-# Init Scope
+# Setup Scope
 
-The `init` scope runs once, before any karaoke line is processed. Only
+The `setup` scope runs once, before any karaoke line is processed. Only
 `code` directives may target it.
 
 ```ass
-Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code init,main = color.rgb_to_ass(255, 128, 0)
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code setup,main = color.rgb_to_ass(255, 128, 0)
 ```
 
 ## Purpose
@@ -15,15 +15,14 @@ Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code init,main = color.rgb_to_as
 ## What's Available
 
 - Color builders: `color.rgb_to_ass`, `color.alpha`, `color.interpolate`.
-- Shared store: `set`, `get`.
 - Modules: `math`, `random`.
 
-Line, syllable, and character variables are **not** available here.
+Line, word, syllable, and character variables are **not** available here.
 
 ## Example
 
 ```ass
-Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code init,main = color.rgb_to_ass(255, 200, 0)
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code setup,main = color.rgb_to_ass(255, 200, 0)
 ```
 
 Then reference it in a template:

@@ -9,9 +9,9 @@ deterministic when `--seed` is passed to the CLI.
 
 Return a uniform float in `[0.0, 1.0)`.
 
-### `random.randint(a, b)`
+### `random.randint(min_value, max_value)`
 
-Return a uniform integer `N` such that `a <= N <= b`.
+Return a uniform integer `N` such that `min_value <= N <= max_value`.
 
 ## Example
 
@@ -20,6 +20,10 @@ Return a uniform integer `N` such that `a <= N <= b`.
 ```
 
 ## Determinism
+
+Without `--seed`, Pykara uses a fresh pseudo-random sequence for each run.
+With `--seed`, every call is still random-like, but the sequence is
+repeatable for the same input and seed.
 
 ```sh
 pykara input.ass output.ass --seed 42

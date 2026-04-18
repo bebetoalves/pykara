@@ -21,8 +21,8 @@ Style: Default,Noto Sans,80,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code init,hsv_step = lambda h: math.floor((1 - math.fabs((h / 60) % 2 - 1)) * 255)
-Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code init,def hsv_to_rgb(h): return ((255, hsv_step(h), 0) if h < 60 else (hsv_step(h), 255, 0) if h < 120 else (0, 255, hsv_step(h)) if h < 180 else (0, hsv_step(h), 255) if h < 240 else (hsv_step(h), 0, 255) if h < 300 else (255, 0, hsv_step(h)))
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code setup,hsv_step = lambda h: math.floor((1 - math.fabs((h / 60) % 2 - 1)) * 255)
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code setup,def hsv_to_rgb(h): return ((255, hsv_step(h), 0) if h < 60 else (hsv_step(h), 255, 0) if h < 120 else (0, 255, hsv_step(h)) if h < 180 else (0, hsv_step(h), 255) if h < 240 else (hsv_step(h), 0, 255) if h < 300 else (255, 0, hsv_step(h)))
 Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code line,kara_colors = [(kara, color.rgb_to_ass(*hsv_to_rgb(random.randint(0, 359)))) for kara in line.syls]
 Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code syl,def autotag(): return "".join(f"\\t({set('time', math.floor(kara.start_time + (math.fabs(kara.center - syl.center) / line.width) * kara.duration))},{get('time') + 33},\\3c{current_color})\\t({get('time') + 133},{get('time') + 233},\\3c{style.outline_color})" for kara, current_color in kara_colors)
 Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template char,!retime.line(-300,0)!{\an5\pos($char_center,$char_middle)!autotag()!\t($syl_start,!$syl_start+33!,\fscx200\fscy200\1c!kara_colors[syl.i][1]!)\t(!$syl_start+33!,$syl_end,\fscx100\fscy100\1c!style.primary_color!)\fad(300,300)}

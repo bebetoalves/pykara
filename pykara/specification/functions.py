@@ -51,28 +51,32 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
     ),
     "color.rgb_to_ass": FunctionSpecification(
         "color.rgb_to_ass",
-        "color.rgb_to_ass(r: int, g: int, b: int) -> str",
+        "color.rgb_to_ass(red: int, green: int, blue: int) -> str",
         "color",
         "Build an ASS color string in override format.",
         frozenset({"template", "code"}),
     ),
     "color.alpha": FunctionSpecification(
         "color.alpha",
-        "color.alpha(a: int) -> str",
+        "color.alpha(alpha: int) -> str",
         "color",
         "Build an ASS alpha string.",
         frozenset({"template", "code"}),
     ),
     "color.interpolate": FunctionSpecification(
         "color.interpolate",
-        "color.interpolate(t: float, c1: str, c2: str) -> str",
+        (
+            "color.interpolate("
+            "progress: float, start_color: str, end_color: str"
+            ") -> str"
+        ),
         "color",
         "Interpolate between two colors at t in [0, 1].",
         frozenset({"template", "code"}),
     ),
-    "math.polar": FunctionSpecification(
-        "math.polar",
-        "math.polar(angle: float, radius: float, axis: str | None = None)",
+    "coord.polar": FunctionSpecification(
+        "coord.polar",
+        "coord.polar(angle: float, radius: float, axis: str | None = None)",
         "geometry",
         "Return screen-space polar coordinates, with positive angles upward.",
         frozenset({"template", "code"}),
@@ -100,7 +104,7 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
     ),
     "shape.displace": FunctionSpecification(
         "shape.displace",
-        "shape.displace(shape: str, dx: float, dy: float) -> str",
+        "shape.displace(shape: str, offset_x: float, offset_y: float) -> str",
         "geometry",
         "Displace every point in an ASS drawing shape.",
         frozenset({"template", "code"}),
@@ -170,9 +174,12 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
     ),
     "random.randint": FunctionSpecification(
         "random.randint",
-        "random.randint(a: int, b: int) -> int",
+        "random.randint(min_value: int, max_value: int) -> int",
         "random",
-        "Return a pseudo-random integer N such that a <= N <= b.",
+        (
+            "Return a pseudo-random integer N such that "
+            "min_value <= N <= max_value."
+        ),
         frozenset({"template", "code"}),
     ),
 }

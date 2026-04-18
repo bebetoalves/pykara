@@ -56,7 +56,7 @@ class CodeDeclaration:
 class ParsedDeclarations:
     """Parsed declarations grouped by execution scope."""
 
-    init: list[CodeDeclaration] = field(
+    setup: list[CodeDeclaration] = field(
         default_factory=_empty_code_declarations
     )
     line: list[TemplateDeclaration | CodeDeclaration] = field(
@@ -246,11 +246,11 @@ class DeclarationParser:
     ) -> None:
         """Append one parsed declaration to the matching scope bucket."""
 
-        if declaration.scope is Scope.INIT:
+        if declaration.scope is Scope.SETUP:
             if not isinstance(declaration, CodeDeclaration):
-                message = "INIT scope is only valid for code declarations."
+                message = "SETUP scope is only valid for code declarations."
                 raise InternalConsistencyError(message)
-            parsed.init.append(declaration)
+            parsed.setup.append(declaration)
             return
 
         if declaration.scope is Scope.LINE:

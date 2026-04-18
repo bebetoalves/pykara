@@ -1,7 +1,7 @@
 # global
 
-Functions without a namespace that are available in both `code` and
-`template` contexts.
+Functions without a namespace that are available in `template` contexts
+and in `code line`, `code word`, or `code syl`.
 
 ## Available Functions
 
@@ -10,7 +10,7 @@ Functions without a namespace that are available in both `code` and
 Store `value` under `key` and return it.
 
 ```ass
-Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code init,set("main", color.rgb_to_ass(255, 200, 0))
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code line,set("main", color.rgb_to_ass(255, 200, 0))
 ```
 
 ### `get(key, default_value=None)`
@@ -28,6 +28,6 @@ Values assigned inside `code` blocks are available as `!name!`, but not
 as `$name`.
 
 ```ass
-Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code init,main = color.rgb_to_ass(255, 200, 0)
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code setup,main = color.rgb_to_ass(255, 200, 0)
 Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template syl,{\1c!main!}
 ```
