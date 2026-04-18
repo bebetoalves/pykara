@@ -9,8 +9,8 @@ Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template line,{\an5\pos($line_ce
 
 ## Variables
 
-The `line_*` variables and the generated-line variables (`layer`,
-`actor`, `loop_i`, `loop_n`) are available. See [Scopes](./scopes.md).
+The generated-line variables and every `line_*` variable are available.
+See [Variables](./variables.md) and [Objects](./objects.md).
 
 ## Behavior
 
@@ -29,11 +29,5 @@ Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template line,{\fad(200,200)}
 Assign a per-line value for later use:
 
 ```ass
-Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code line,hue = line_i % 3
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code line,hue = line.i % 3
 ```
-
-## See Also
-
-- [Word Scope](./word-scope.md)
-- [Syllable Scope](./syllable-scope.md)
-- [Modifiers](./modifiers.md)

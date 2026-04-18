@@ -22,13 +22,16 @@ The source syllable text is appended to the rendered body unless
 ## `code <scope>`
 
 Runs Python code. Values assigned here become available to later
-directives as `$name` or `!name!`.
+directives as `!name!`.
 
 - **Scopes:** `init`, `line`, `word`, `syl`.
 - **Modifiers:** none.
+- **Runtime names:** expression objects such as `line`, `word`, `syl`,
+  `style`, `metadata`, plus helpers like `get`, `set`, `color.*`,
+  `math.*`, and other documented tools.
 
 ```ass
-Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code init,main = color.ass(255, 128, 0)
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code init,main = color.rgb_to_ass(255, 128, 0)
 ```
 
 ```ass
@@ -38,12 +41,8 @@ Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template syl,{\1c!main!}
 ## Execution Order
 
 1. All `code init` directives run once.
-1. For each karaoke line: `line` directives run, then every word runs
-   its `word` directives, every syllable runs its `syl` directives, and
-   every character runs its `char` directives.
-
-## See Also
-
-- [Scopes](./scopes.md)
-- [Modifiers](./modifiers.md)
-- [Interpolation](./interpolation.md)
+1. For each karaoke line, `line` directives run first.
+1. Inside that line, each word runs its `word` directives in order.
+1. Inside each word, each syllable runs its `syl` directives in order.
+1. Inside each syllable, each character runs its `char` directives in
+   order.

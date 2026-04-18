@@ -14,14 +14,14 @@ from pykara.engine.functions.geometry import (
     ShapeRotateFunction,
     ShapeSliderFunction,
 )
-from pykara.engine.functions.relayer import RelayerFunction
+from pykara.engine.functions.layer import LayerSetFunction
 from pykara.engine.functions.retime import RETIME_MODES, RetimeFunction
 from pykara.engine.functions.store import GetFunction, SetFunction
 
 FUNCTION_REGISTRY = FunctionRegistry()
 for _function in (
     RetimeFunction(),
-    RelayerFunction(),
+    LayerSetFunction(),
     GetFunction(),
     SetFunction(),
     AssColorFunction(),
@@ -45,8 +45,8 @@ __all__ = [
     "FunctionRegistry",
     "GetFunction",
     "InterpolateColorFunction",
+    "LayerSetFunction",
     "PolarFunction",
-    "RelayerFunction",
     "RetimeFunction",
     "RoundCoordFunction",
     "SetFunction",

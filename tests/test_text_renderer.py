@@ -298,4 +298,9 @@ class TestTextRenderer:
         renderer = TextRenderer()
 
         with pytest.raises(BoundMethodInExpressionError):
-            renderer.render("!relayer!", make_env())
+            renderer.render("!layer.set!", make_env())
+
+    def test_renders_none_expression_result_as_empty_string(self) -> None:
+        renderer = TextRenderer()
+
+        assert renderer.render("a!None!b", make_env()) == "ab"

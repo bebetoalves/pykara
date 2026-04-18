@@ -2,6 +2,8 @@
 
 Retime the generated line with an explicit target.
 
+## Usage
+
 ```python
 retime.<target>()
 retime.<target>(start_offset, end_offset)
@@ -9,15 +11,18 @@ retime.<target>.<preset>(start_offset, end_offset)
 ```
 
 `start_offset` and `end_offset` are milliseconds and default to `0`.
-Every call returns an empty string, so it can be placed inside an inline
-expression without affecting output text.
+
+`retime` returns `None`, so inside template text it renders as an empty
+string.
 
 Each template evaluation accepts at most one `retime` call.
 
-## Targets
+## Available Functions
+
+### Targets
 
 | Target | Result range |
-|--------|--------------|
+|-------------|---------------------------------|
 | `line` | Full source line. |
 | `preline` | Line start anchor. |
 | `postline` | Line end anchor. |
@@ -27,32 +32,35 @@ Each template evaluation accepts at most one `retime` call.
 | `start2syl` | Line start to syllable start. |
 | `syl2end` | Syllable end to line end. |
 
-Line targets are valid in `template line`, `template word`, `template syl`,
-and `template char`.
+`line`, `preline`, and `postline` are valid in `template line`,
+`template word`, `template syl`, and `template char`.
 
-Syllable targets are valid in `template syl` and `template char`. In
-`template char`, the active syllable is the character's parent syllable.
+`syl`, `presyl`, and `postsyl` are valid in `template syl` and
+`template char`. In `template char`, the active syllable is the
+character's parent syllable.
 
-## Presets
+`start2syl` and `syl2end` are valid only in `template syl`.
+
+### Presets
 
 Presets distribute a target over the implicit collection for the current
 scope.
 
 | Scope | Valid preset targets | Collection |
-|-------|----------------------|------------|
+|-----------------|-------------------------------|---------------------|
 | `template word` | `line`, `preline`, `postline` | line words |
 | `template syl` | `line`, `preline`, `postline` | line syllables |
 | `template syl` | `start2syl`, `syl2end` | line syllables |
 | `template char` | `line`, `preline`, `postline` | line characters |
 | `template char` | `syl`, `presyl`, `postsyl` | syllable characters |
 
-Presets are invalid in `template line`. Preset collections with zero or one
-element are runtime errors.
+Presets are invalid in `template line`. Preset collections with zero or
+one element are runtime errors.
 
 Available presets:
 
 | Preset | Order |
-|--------|-------|
+|---------------|-----------------------------|
 | `ltr` | textual left to right |
 | `rtl` | textual right to left |
 | `from_center` | center first |
@@ -82,7 +90,3 @@ Stagger line lead-in across characters:
 ```ass
 Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template char,!retime.line.ltr(-300, 0)!{\pos($char_center,$char_middle)\fad(300,0)}
 ```
-
-## See Also
-
-- [Syllable Scope](../directives/syllable-scope.md)

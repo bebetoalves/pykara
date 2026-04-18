@@ -1090,7 +1090,7 @@ class TestEngineIntegration:
         declarations = ParsedDeclarations(
             syl=[
                 CodeDeclaration(
-                    body=CodeBody("set('bad', relayer)"),
+                    body=CodeBody("set('bad', layer.set)"),
                     scope=Scope.SYL,
                 )
             ]

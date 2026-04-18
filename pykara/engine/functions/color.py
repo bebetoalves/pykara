@@ -14,7 +14,7 @@ def _clamp_byte(value: int) -> int:
 class AssColorFunction:
     """Return an ASS color string in ``&H00BBGGRR&`` format."""
 
-    name: ClassVar[str] = "color.ass"
+    name: ClassVar[str] = "color.rgb_to_ass"
     aliases: ClassVar[tuple[str, ...]] = ()
     applicable_to: ClassVar[frozenset[str]] = frozenset({"template", "code"})
 

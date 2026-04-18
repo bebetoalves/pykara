@@ -18,8 +18,8 @@ from pykara.engine.functions import (
     FunctionRegistry,
     GetFunction,
     InterpolateColorFunction,
+    LayerSetFunction,
     PolarFunction,
-    RelayerFunction,
     RetimeFunction,
     RoundCoordFunction,
     SetFunction,
@@ -166,7 +166,7 @@ class TestRetimeFunction:
         retime = RetimeFunction().build_bound(env)
         result = getattr(retime, target)(start_offset, end_offset)
 
-        assert result == ""
+        assert result is None
         assert (env.line.start_time, env.line.end_time) == expected
         assert env.line.duration == expected[1] - expected[0]
 
@@ -215,13 +215,13 @@ class TestRetimeFunction:
             retime.line.ltr(-300, 0)
 
 
-class TestRelayerFunction:
+class TestLayerSetFunction:
     def test_sets_layer(self) -> None:
         env = DummyEnvironment()
 
-        result = RelayerFunction()(env, 7)
+        result = LayerSetFunction()(env, 7)
 
-        assert result == ""
+        assert result is None
         assert env.line.layer == 7
 
 
@@ -311,14 +311,15 @@ class TestFunctionRegistry:
     def test_build_namespace_binds_environment(self) -> None:
         env = DummyEnvironment()
         registry = FunctionRegistry()
-        registry.register(RelayerFunction())
+        registry.register(LayerSetFunction())
 
         namespace = registry.build_namespace(env, "template")
-        relayer = cast(Callable[[int], object], namespace["relayer"])
-        assert isinstance(relayer, Callable)
-        result = relayer(4)
+        assert isinstance(namespace["layer"], SimpleNamespace)
+        layer_set = cast(Callable[[int], object], namespace["layer"].set)
+        assert isinstance(layer_set, Callable)
+        result = layer_set(4)
 
-        assert result == ""
+        assert result is None
         assert env.line.layer == 4
 
     def test_filters_by_declaration(self) -> None:
@@ -354,14 +355,16 @@ class TestDefaultRegistry:
         namespace = FUNCTION_REGISTRY.build_namespace(env, "template")
 
         assert "retime" in namespace
-        assert "relayer" in namespace
+        assert isinstance(namespace["layer"], SimpleNamespace)
         assert "get" in namespace
         assert "set" in namespace
         assert isinstance(namespace["color"], SimpleNamespace)
         assert isinstance(namespace["math"], SimpleNamespace)
         assert isinstance(namespace["coord"], SimpleNamespace)
         assert isinstance(namespace["shape"], SimpleNamespace)
-        assert namespace["color"].ass(255, 128, 0) == "&H000080FF&"
+        assert namespace["color"].rgb_to_ass(255, 128, 0) == "&H000080FF&"
+        assert namespace["layer"].set(3) is None
+        assert env.line.layer == 3
         assert namespace["color"].alpha(255) == "&HFF&"
         assert (
             namespace["color"].interpolate(

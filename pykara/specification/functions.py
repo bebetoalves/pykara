@@ -19,7 +19,7 @@ class FunctionSpecification:
 FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
     "retime": FunctionSpecification(
         "retime",
-        "retime.<target>(start_offset: int = 0, end_offset: int = 0) -> str",
+        "retime.<target>(start_offset: int = 0, end_offset: int = 0) -> None",
         "engine",
         (
             "Namespace with targets line, preline, postline, syl, presyl, "
@@ -28,9 +28,9 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
         ),
         frozenset({"template"}),
     ),
-    "relayer": FunctionSpecification(
-        "relayer",
-        "relayer(layer: int) -> str",
+    "layer.set": FunctionSpecification(
+        "layer.set",
+        "layer.set(value: int) -> None",
         "engine",
         "Set the output line layer.",
         frozenset({"template", "code"}),
@@ -49,9 +49,9 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
         "Store one value in the shared store.",
         frozenset({"template", "code"}),
     ),
-    "color.ass": FunctionSpecification(
-        "color.ass",
-        "color.ass(r: int, g: int, b: int) -> str",
+    "color.rgb_to_ass": FunctionSpecification(
+        "color.rgb_to_ass",
+        "color.rgb_to_ass(r: int, g: int, b: int) -> str",
         "color",
         "Build an ASS color string in override format.",
         frozenset({"template", "code"}),
@@ -178,5 +178,5 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
 }
 
 EXPOSED_MODULES: frozenset[str] = frozenset(
-    {"color", "coord", "math", "random", "shape"}
+    {"color", "coord", "layer", "math", "random", "shape"}
 )

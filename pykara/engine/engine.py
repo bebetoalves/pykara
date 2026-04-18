@@ -923,7 +923,7 @@ class Engine:
         return syllable.duration <= 0 or syllable.trimmed_text == ""
 
     def _is_karaoke_event(self, event: Event) -> bool:
-        return not event.comment and event.effect.lower() == "karaoke"
+        return event.effect.lower() == "karaoke"
 
     def _strip_karaoke_text(self, text: str) -> str:
         return self._karaoke_parser.parse_text(text).text

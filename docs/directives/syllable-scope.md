@@ -10,7 +10,7 @@ Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template syl,{\pos($syl_center,$
 ## Variables
 
 The `line_*`, `word_*`, and `syl_*` variables are available. See
-[Scopes](./scopes.md).
+[Variables](./variables.md) and [Objects](./objects.md).
 
 ## Behavior
 
@@ -39,10 +39,3 @@ Only run on syllables tagged `glow`:
 ```ass
 Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template syl fx glow,{\pos($syl_center,$syl_middle)\blur3}
 ```
-
-## See Also
-
-- [Word Scope](./word-scope.md)
-- [Char Scope](./char-scope.md)
-- [retime](../tools/retime.md)
-- [Modifiers](./modifiers.md)

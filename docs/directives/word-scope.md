@@ -11,7 +11,7 @@ Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template word,{\pos($word_center
 ## Variables
 
 Only the `line_*` and `word_*` variables are available in `word` scope.
-See [Scopes](./scopes.md).
+See [Variables](./variables.md) and [Objects](./objects.md).
 
 ## Behavior
 
@@ -34,9 +34,3 @@ Assign a per-word value for syllable templates inside the same word:
 ```ass
 Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code word,word_is_even = word.i % 2 == 0
 ```
-
-## See Also
-
-- [Line Scope](./line-scope.md)
-- [Syllable Scope](./syllable-scope.md)
-- [Modifiers](./modifiers.md)

@@ -10,10 +10,10 @@ template syl loop 3 no_blank
 ## Reference
 
 | Modifier | Argument | Scopes | Purpose |
-|----------|----------|--------|---------|
+|------------|----------|-------------------------------|----------------------------------------------------|
 | `loop` | yes | `line`, `word`, `syl`, `char` | Repeat the template N times. |
 | `no_blank` | no | `word`, `syl`, `char` | Skip empty words, syllables, or characters. |
-| `no_text` | no | all | Do not append source text to the output. |
+| `no_text` | no | `line`, `word`, `syl`, `char` | Do not append source text to the output. |
 | `fx` | yes | `syl` | Match only syllables with the given inline-fx tag. |
 | `when` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is truthy. |
 | `unless` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is falsy. |
@@ -52,16 +52,13 @@ Match only syllables tagged with the given inline-fx name.
 ## `when` / `unless`
 
 ```ass
-template syl when ($syl_i == 0)
-template syl unless ($syl_i == $syl_n - 1)
+template syl when (syl.i == 0)
+template syl unless (syl.i == syl.n - 1)
 ```
 
 - `when EXPR` — run only if truthy.
 - `unless EXPR` — run only if falsy.
+- Expressions use the same names available inside `!expr!`, such as
+  `line.i`, `word.i`, `syl.i`, `char.i`, `style`, and `metadata`.
 
 Parentheses are required when the expression contains spaces.
-
-## See Also
-
-- [Types](./types.md)
-- [Scopes](./scopes.md)

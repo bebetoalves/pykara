@@ -37,15 +37,17 @@ MODIFIER_SPECIFICATIONS: dict[str, ModifierSpecification] = {
         takes_argument=False,
         applicable_to=frozenset({"template"}),
         allowed_scopes=frozenset({Scope.WORD, Scope.SYL, Scope.CHAR}),
-        description="Skip blank syllables or characters.",
+        description="Skip blank words, syllables, or characters.",
     ),
     "no_text": ModifierSpecification(
         keyword="no_text",
         aliases=(),
         takes_argument=False,
         applicable_to=frozenset({"template"}),
-        allowed_scopes=frozenset({Scope.WORD, Scope.SYL, Scope.CHAR}),
-        description="Do not append the source syllable text to the output.",
+        allowed_scopes=frozenset(
+            {Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR}
+        ),
+        description="Do not append the source scope text to the output.",
     ),
     "fx": ModifierSpecification(
         keyword="fx",

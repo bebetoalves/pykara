@@ -10,7 +10,8 @@ Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template char,{\pos($char_center
 ## Variables
 
 The `line_*`, `word_*`, `syl_*`, and `char_*` variables are available.
-Characters inherit the parent syllable's timing.
+Characters inherit the parent syllable's timing. See
+[Variables](./variables.md) and [Objects](./objects.md).
 
 ## Behavior
 
@@ -27,8 +28,3 @@ Rotate each character slightly based on its index:
 ```ass
 Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template char,{\pos($char_center,$char_middle)\frz!$char_i * 10!}
 ```
-
-## See Also
-
-- [Syllable Scope](./syllable-scope.md)
-- [Scopes](./scopes.md)

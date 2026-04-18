@@ -85,4 +85,5 @@ class TextRenderer:
         return str(variables[variable_name])
 
     def _replace_expression(self, expression: str, env: Environment) -> str:
-        return str(self.evaluate_expression(expression, env))
+        result = self.evaluate_expression(expression, env)
+        return "" if result is None else str(result)

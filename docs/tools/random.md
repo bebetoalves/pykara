@@ -5,10 +5,13 @@ deterministic when `--seed` is passed to the CLI.
 
 ## Available Functions
 
-| Name | Description |
-|------|-------------|
-| `random.random()` | Uniform float in `[0.0, 1.0)`. |
-| `random.randint(a, b)` | Uniform int with `a <= N <= b`. |
+### `random.random()`
+
+Return a uniform float in `[0.0, 1.0)`.
+
+### `random.randint(a, b)`
+
+Return a uniform integer `N` such that `a <= N <= b`.
 
 ## Example
 
@@ -21,7 +24,3 @@ deterministic when `--seed` is passed to the CLI.
 ```sh
 pykara input.ass output.ass --seed 42
 ```
-
-## See Also
-
-- [math](./math.md)

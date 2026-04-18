@@ -108,7 +108,7 @@ EXPECTED_MATH_FUNCTIONS = {
 }
 
 EXPECTED_COLOR_FUNCTIONS = {
-    "color.ass",
+    "color.rgb_to_ass",
     "color.alpha",
     "color.interpolate",
 }
@@ -365,7 +365,7 @@ class TestFunctions:
 
     def test_exposed_modules_are_unique(self) -> None:
         assert EXPOSED_MODULES == frozenset(
-            {"color", "coord", "math", "random", "shape"}
+            {"color", "coord", "layer", "math", "random", "shape"}
         )
 
 

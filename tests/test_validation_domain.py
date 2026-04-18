@@ -348,6 +348,15 @@ class TestTemplateRules:
 
         assert CompatibleTemplateModifierScopeRule().check(declaration) is None
 
+    def test_modifier_scope_rule_accepts_line_no_text(self) -> None:
+        declaration = replace(
+            make_template_declaration(),
+            scope=Scope.LINE,
+            modifiers=TemplateModifiers(no_text=True),
+        )
+
+        assert CompatibleTemplateModifierScopeRule().check(declaration) is None
+
     def test_modifier_scope_rule_reports_incompatible_modifier(self) -> None:
         declaration = replace(
             make_template_declaration(),

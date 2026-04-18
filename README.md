@@ -1,36 +1,62 @@
 # Pykara Templater
 
-Pykara generates karaoke effect (`fx`) lines for ASS subtitle files.
+**Pykara** is a karaoke templating framework written in Python. It is conceptually inspired by the legacy Kara Templater
+from Aegisub (originally implemented in Lua).
 
 ## Requirements
 
-- Python 3.11+
-- [pysubs2](https://github.com/tkarabela/pysubs2) >= 1.7
+- Python 3.11 or higher
 
 ## Installation
+
+Using `pipx` (recommended for isolated CLI tools):
 
 ```sh
 pipx install .
 ```
 
+Alternatively, for development or local usage:
+
+```sh
+pip install .
+```
+
 ## Usage
+
+Basic invocation:
 
 ```sh
 pykara input.ass output.ass
-pykara input.ass output.ass --json output.json
-pykara input.ass output.ass --warn-only
-pykara input.ass output.ass --seed 42
 ```
 
+Optional flags:
+
+```sh
+pykara input.ass output.ass --json output.json   # Export intermediate data
+pykara input.ass output.ass --warn-only          # Downgrade errors to warnings
+pykara input.ass output.ass --seed 42            # Deterministic output
+```
+
+For comprehensive information about the engine, please refer to the complete documentation available [here](docs/index.md).
+
 ## Development
+
+Create and activate a virtual environment:
 
 ```sh
 python -m venv .venv
 source .venv/bin/activate
+```
+
+Install development dependencies:
+
+```sh
 pip install -e ".[dev]"
 ```
 
-Run checks:
+### Code Quality & Testing
+
+Run all checks:
 
 ```sh
 mdformat --check .
@@ -42,4 +68,4 @@ pytest --cov
 
 ## License
 
-MIT
+Distributed under the MIT License.
