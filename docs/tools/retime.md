@@ -59,9 +59,9 @@ character's parent syllable.
 
 ### Presets
 
-Presets spread the offsets across repeated items. In `template syl`,
-for example, `retime.line.ltr(-300, 0)` makes earlier syllables start
-further before the line and later syllables closer to the line start.
+Presets spread the offsets across repeated items. In `template char`,
+for example, `retime.line.ltr(-300, 0)` makes earlier characters start
+further before the line and later characters closer to the line start.
 
 Presets need at least two items to spread across, so they are not valid
 in `template line`. `syl`, `presyl`, and `postsyl` presets need
