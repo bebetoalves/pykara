@@ -1,7 +1,7 @@
 # global
 
-Use these non-namespaced functions to share temporary values between
-templates and scoped `code` directives.
+Global functions are called directly, without a namespace. They are
+available while rendering karaoke lines.
 
 ## Available Functions
 
