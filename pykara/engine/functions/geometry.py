@@ -155,10 +155,10 @@ class ShapeDisplaceFunction:
         )
 
 
-class ShapeCenterposFunction:
+class ShapeCenterAtFunction:
     """Move a shape so its bounding-box center sits at ``x,y``."""
 
-    name: ClassVar[str] = "shape.centerpos"
+    name: ClassVar[str] = "shape.center_at"
     aliases: ClassVar[tuple[str, ...]] = ()
     applicable_to: ClassVar[frozenset[str]] = frozenset({"template", "code"})
 
@@ -173,10 +173,10 @@ class ShapeCenterposFunction:
         return _center_shape(shape, x, y)
 
 
-class ShapeSliderFunction:
+class ShapeSplitClipFunction:
     """Build a rotated split clipping shape centered at ``x,y``."""
 
-    name: ClassVar[str] = "shape.slider"
+    name: ClassVar[str] = "shape.split_clip"
     aliases: ClassVar[tuple[str, ...]] = ()
     applicable_to: ClassVar[frozenset[str]] = frozenset({"template", "code"})
 

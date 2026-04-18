@@ -23,10 +23,10 @@ from pykara.engine.functions import (
     RetimeFunction,
     RoundCoordFunction,
     SetFunction,
-    ShapeCenterposFunction,
+    ShapeCenterAtFunction,
     ShapeDisplaceFunction,
     ShapeRotateFunction,
-    ShapeSliderFunction,
+    ShapeSplitClipFunction,
 )
 from pykara.errors import EngineError
 
@@ -280,19 +280,19 @@ class TestGeometryFunctions:
         assert round_coord(object(), 3.49) == 3
         assert round_coord(object(), 3.5) == 4
 
-    def test_shape_rotate_centerpos_and_displace(self) -> None:
+    def test_shape_rotate_center_at_and_displace(self) -> None:
         shape = "m 0 0 l 10 0 l 10 20"
 
         rotated = ShapeRotateFunction()(object(), shape, 90)
-        centered = ShapeCenterposFunction()(object(), rotated)
+        centered = ShapeCenterAtFunction()(object(), rotated)
         displaced = ShapeDisplaceFunction()(object(), centered, 50, 60)
 
         assert rotated == "m 0 0 l 0 -10 l 20 -10"
         assert centered == "m -10 5 l -10 -5 l 10 -5"
         assert displaced == "m 40 65 l 40 55 l 60 55"
 
-    def test_shape_slider_builds_centered_split_clip(self) -> None:
-        result = ShapeSliderFunction()(object(), 20, 0, 50, 60)
+    def test_shape_split_clip_builds_centered_split_clip(self) -> None:
+        result = ShapeSplitClipFunction()(object(), 20, 0, 50, 60)
 
         assert result == "m 40 60 l 60 60 l 60 50 l 40 50 m 40 70 l 60 70"
 
@@ -391,8 +391,8 @@ class TestDefaultRegistry:
         assert namespace["shape"].rotate("m 0 0 l 10 0", 90) == (
             "m 0 0 l 0 -10"
         )
-        assert namespace["shape"].centerpos("m 0 0 l 10 0") == ("m -5 0 l 5 0")
+        assert namespace["shape"].center_at("m 0 0 l 10 0") == ("m -5 0 l 5 0")
         assert namespace["shape"].displace("m 0 0", 1, 2) == "m 1 2"
-        assert namespace["shape"].slider(20, 0, 50, 60) == (
+        assert namespace["shape"].split_clip(20, 0, 50, 60) == (
             "m 40 60 l 60 60 l 60 50 l 40 50 m 40 70 l 60 70"
         )

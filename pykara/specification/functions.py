@@ -95,9 +95,9 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
         "Rotate every point in an ASS drawing shape.",
         frozenset({"template", "code"}),
     ),
-    "shape.centerpos": FunctionSpecification(
-        "shape.centerpos",
-        "shape.centerpos(shape: str, x: float = 0, y: float = 0) -> str",
+    "shape.center_at": FunctionSpecification(
+        "shape.center_at",
+        "shape.center_at(shape: str, x: float = 0, y: float = 0) -> str",
         "geometry",
         "Move a shape so its bounding-box center is at x,y.",
         frozenset({"template", "code"}),
@@ -109,9 +109,9 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
         "Displace every point in an ASS drawing shape.",
         frozenset({"template", "code"}),
     ),
-    "shape.slider": FunctionSpecification(
-        "shape.slider",
-        "shape.slider(width: float, angle=0, x=0, y=0, height=None) -> str",
+    "shape.split_clip": FunctionSpecification(
+        "shape.split_clip",
+        "shape.split_clip(width: float, angle=0, x=0, y=0, height=None) -> str",
         "geometry",
         "Build a rotated split clipping shape centered at x,y.",
         frozenset({"template", "code"}),

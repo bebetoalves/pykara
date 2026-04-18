@@ -9,10 +9,10 @@ from pykara.engine.functions.color import (
 from pykara.engine.functions.geometry import (
     PolarFunction,
     RoundCoordFunction,
-    ShapeCenterposFunction,
+    ShapeCenterAtFunction,
     ShapeDisplaceFunction,
     ShapeRotateFunction,
-    ShapeSliderFunction,
+    ShapeSplitClipFunction,
 )
 from pykara.engine.functions.layer import LayerSetFunction
 from pykara.engine.functions.retime import RETIME_MODES, RetimeFunction
@@ -30,9 +30,9 @@ for _function in (
     PolarFunction(),
     RoundCoordFunction(),
     ShapeRotateFunction(),
-    ShapeCenterposFunction(),
+    ShapeCenterAtFunction(),
     ShapeDisplaceFunction(),
-    ShapeSliderFunction(),
+    ShapeSplitClipFunction(),
 ):
     FUNCTION_REGISTRY.register(_function)
 
@@ -50,8 +50,8 @@ __all__ = [
     "RetimeFunction",
     "RoundCoordFunction",
     "SetFunction",
-    "ShapeCenterposFunction",
+    "ShapeCenterAtFunction",
     "ShapeDisplaceFunction",
     "ShapeRotateFunction",
-    "ShapeSliderFunction",
+    "ShapeSplitClipFunction",
 ]

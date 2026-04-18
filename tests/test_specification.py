@@ -117,9 +117,9 @@ EXPECTED_COORD_FUNCTIONS = {
 
 EXPECTED_SHAPE_FUNCTIONS = {
     "shape.rotate",
-    "shape.centerpos",
+    "shape.center_at",
     "shape.displace",
-    "shape.slider",
+    "shape.split_clip",
 }
 
 EXPECTED_RANDOM_FUNCTIONS = {

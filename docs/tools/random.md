@@ -21,9 +21,8 @@ Return a uniform integer `N` such that `a <= N <= b`.
 
 ## Determinism
 
-Without `--seed`, Pykara uses a fresh pseudo-random sequence for each run.
-With `--seed`, every call is still random-like, but the sequence is
-repeatable for the same input and seed.
+Use `--seed` when you want the same input to produce the same random
+values every time. Without a seed, each run may produce different values.
 
 ```sh
 pykara input.ass output.ass --seed 42
