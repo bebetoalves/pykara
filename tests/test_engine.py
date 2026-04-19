@@ -361,6 +361,48 @@ class TestEngineIntegration:
             "W1/2:960-990: al!",
         ]
 
+    def test_applies_word_templates_to_plain_karaoke_words(self) -> None:
+        engine = build_engine()
+        event = Event(
+            text="Foo bar boo bar nee sii",
+            effect="karaoke",
+            style="Default",
+            layer=0,
+            start_time=0,
+            end_time=5000,
+            comment=False,
+            actor="Singer",
+            margin_l=0,
+            margin_r=0,
+            margin_t=0,
+            margin_b=0,
+        )
+        declarations = ParsedDeclarations(
+            word=[
+                TemplateDeclaration(
+                    body=TemplateBody("W$word_i/$word_n:$word_center:"),
+                    scope=Scope.WORD,
+                    modifiers=TemplateModifiers(no_blank=True),
+                )
+            ]
+        )
+
+        results = engine.apply(
+            [event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == [
+            "W0/6:860:Foo",
+            "W1/6:900: bar",
+            "W2/6:940: boo",
+            "W3/6:980: bar",
+            "W4/6:1020: nee",
+            "W5/6:1060: sii",
+        ]
+
     def test_syllable_scope_can_access_current_word(self) -> None:
         engine = build_engine()
         event = Event(
