@@ -378,11 +378,43 @@ class VarContext:
         """Return the current variable mapping without missing values."""
 
         return {
-            field_info.name: value
-            for field_info in fields(self)
-            if not field_info.name.startswith("_")
-            if (value := getattr(self, field_info.name)) is not None
+            field_name: value
+            for field_name in _VAR_CONTEXT_VARIABLE_FIELD_NAMES
+            if (value := getattr(self, field_name)) is not None
         }
+
+
+_VAR_CONTEXT_VARIABLE_FIELD_NAMES = tuple(
+    field_info.name
+    for field_info in fields(VarContext)
+    if not field_info.name.startswith("_")
+)
+
+
+class _MathNamespace:
+    """Immutable math helper namespace exposed to execution."""
+
+    __slots__ = ()
+
+    ceil = math.ceil
+    cos = math.cos
+    fabs = math.fabs
+    floor = math.floor
+    radians = math.radians
+    sin = math.sin
+    sqrt = math.sqrt
+
+
+def _empty_expression_object_cache() -> dict[str, object]:
+    return {}
+
+
+def _empty_exposed_module_cache() -> dict[str, object]:
+    return {
+        module_name: _MathNamespace()
+        for module_name in EXPOSED_MODULES
+        if module_name == "math"
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -1021,6 +1053,12 @@ class Environment:
     _function_namespace_cache: dict[str, dict[str, object]] = field(
         default_factory=_empty_function_namespace_cache
     )
+    _expression_object_cache: dict[str, object] = field(
+        default_factory=_empty_expression_object_cache
+    )
+    _exposed_module_cache: dict[str, object] = field(
+        default_factory=_empty_exposed_module_cache
+    )
     char_syllable_cache: dict[int, tuple[Syllable, ...]] = field(
         default_factory=_empty_char_syllable_cache
     )
@@ -1070,21 +1108,9 @@ class Environment:
         return cached
 
     def _exposed_modules(self) -> dict[str, object]:
-        modules: dict[str, object] = {}
-        for module_name in EXPOSED_MODULES:
-            if module_name == "math":
-                modules[module_name] = SimpleNamespace(
-                    ceil=math.ceil,
-                    cos=math.cos,
-                    fabs=math.fabs,
-                    floor=math.floor,
-                    radians=math.radians,
-                    sin=math.sin,
-                    sqrt=math.sqrt,
-                )
-            if module_name == "random":
-                modules[module_name] = self.rng
-        return modules
+        if "random" in EXPOSED_MODULES:
+            self._exposed_module_cache["random"] = self.rng
+        return self._exposed_module_cache
 
     def _merge_function_namespace(
         self,
@@ -1112,17 +1138,40 @@ class Environment:
     def _expression_objects(self) -> dict[str, object]:
         namespace: dict[str, object] = {}
         if self.vars.line_start is not None:
-            namespace["line"] = _ExpressionLineObject(self)
-            namespace["style"] = _ExpressionStyleObject(self)
+            namespace["line"] = self._expression_object("line")
+            namespace["style"] = self._expression_object("style")
             if self.metadata is not None:
-                namespace["metadata"] = _ExpressionMetadataObject(self)
+                namespace["metadata"] = self._expression_object("metadata")
         if self.vars.word_start is not None:
-            namespace["word"] = _ExpressionWordObject(self)
+            namespace["word"] = self._expression_object("word")
         if self.vars.syl_start is not None:
-            namespace["syl"] = _ExpressionSyllableObject(self)
+            namespace["syl"] = self._expression_object("syl")
         if self.char is not None:
-            namespace["char"] = _ExpressionCharObject(self)
+            namespace["char"] = self._expression_object("char")
         return namespace
+
+    def _expression_object(self, name: str) -> object:
+        cached = self._expression_object_cache.get(name)
+        if cached is not None:
+            return cached
+
+        if name == "line":
+            cached = _ExpressionLineObject(self)
+        elif name == "style":
+            cached = _ExpressionStyleObject(self)
+        elif name == "metadata":
+            cached = _ExpressionMetadataObject(self)
+        elif name == "word":
+            cached = _ExpressionWordObject(self)
+        elif name == "syl":
+            cached = _ExpressionSyllableObject(self)
+        elif name == "char":
+            cached = _ExpressionCharObject(self)
+        else:  # pragma: no cover - internal misuse guard
+            raise KeyError(name)
+
+        self._expression_object_cache[name] = cached
+        return cached
 
     def push_loop_states(self, loop_states: list[LoopState]) -> None:
         """Append active loop states for the current render frame."""

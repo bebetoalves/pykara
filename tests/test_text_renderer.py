@@ -177,6 +177,42 @@ class TestTextRenderer:
         assert renderer.render("!line.center + 2!", env) == "37"
         assert compile_calls == 1
 
+    def test_reuses_environment_mappings_during_one_render(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        renderer = TextRenderer()
+        variable_dict_calls = 0
+        as_dict_calls = 0
+        original_variable_dict = Environment.variable_dict
+        original_as_dict = Environment.as_dict
+
+        def counting_variable_dict(self: Environment) -> dict[str, object]:
+            nonlocal variable_dict_calls
+            variable_dict_calls += 1
+            return original_variable_dict(self)
+
+        def counting_as_dict(self: Environment) -> dict[str, object]:
+            nonlocal as_dict_calls
+            as_dict_calls += 1
+            return original_as_dict(self)
+
+        monkeypatch.setattr(
+            Environment,
+            "variable_dict",
+            counting_variable_dict,
+        )
+        monkeypatch.setattr(Environment, "as_dict", counting_as_dict)
+
+        rendered = renderer.render(
+            "$line_center-$line_middle-!line.center!-!line.middle!",
+            make_env(),
+        )
+
+        assert rendered == "35-80-35-80"
+        assert variable_dict_calls == 1
+        assert as_dict_calls == 1
+
     def test_exposes_line_syllables_in_expressions(self) -> None:
         renderer = TextRenderer()
         env = make_env()

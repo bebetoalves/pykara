@@ -1115,6 +1115,39 @@ class TestEngineIntegration:
             (1210, 1520),
         ]
 
+    def test_render_namespace_reuse_preserves_template_side_effects(
+        self,
+    ) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody(
+                        "!layer.set(3)!"
+                        "!set('picked', random.randint(1, 10))!"
+                        "!get('picked')!-!line.layer!-"
+                        "!retime.syl(10, 20)!S"
+                    ),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(no_text=True),
+                )
+            ]
+        )
+
+        results = engine.apply(
+            [make_event()],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == ["33-3-S", "1010-3-S"]
+        assert [result.layer for result in results] == [3, 3]
+        assert [(result.start_time, result.end_time) for result in results] == [
+            (1010, 1220),
+            (1210, 1520),
+        ]
+
     def test_renders_line_preset_over_chars(self) -> None:
         engine = build_engine()
         declarations = ParsedDeclarations(
