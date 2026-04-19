@@ -7,8 +7,13 @@ from dataclasses import replace
 from pykara.data import Event, Metadata, Style, Syllable
 from pykara.declaration import Scope
 from pykara.declaration.code import CodeBody
+from pykara.declaration.patch import PatchBody, PatchModifiers
 from pykara.declaration.template import TemplateBody, TemplateModifiers
-from pykara.parsing import CodeDeclaration, TemplateDeclaration
+from pykara.parsing import (
+    CodeDeclaration,
+    PatchDeclaration,
+    TemplateDeclaration,
+)
 from pykara.validation.reports import Severity
 from pykara.validation.rules.code_rules import (
     CodeAllowedScopeRule,
@@ -26,6 +31,11 @@ from pykara.validation.rules.metadata_rules import (
     PositiveResolutionRule,
     PositiveVideoCorrectFactorRule,
 )
+from pykara.validation.rules.patch_rules import (
+    CompatiblePatchModifierScopeRule,
+    PatchAllowedScopeRule,
+    PatchPythonExpressionSyntaxRule,
+)
 from pykara.validation.rules.style_rules import (
     NonNegativeMarginsRule,
     PositiveFontSizeRule,
@@ -40,6 +50,7 @@ from pykara.validation.validators import (
     EventValidator,
     KaraokeValidator,
     MetadataValidator,
+    PatchValidator,
     StyleValidator,
     TemplateValidator,
 )
@@ -125,6 +136,14 @@ def make_code_declaration() -> CodeDeclaration:
     return CodeDeclaration(
         body=CodeBody("counter = 1\ncounter += 1"),
         scope=Scope.SYL,
+    )
+
+
+def make_patch_declaration() -> PatchDeclaration:
+    return PatchDeclaration(
+        body=PatchBody(r"{\1c&HFFFFFF&}!x + 1!"),
+        scope=Scope.SYL,
+        modifiers=PatchModifiers(),
     )
 
 
@@ -424,4 +443,52 @@ class TestCodeRules:
         assert tuple(violation.code for violation in report.violations) == (
             "code.scope_allowed",
             "code.python_syntax",
+        )
+
+
+class TestPatchRules:
+    def test_patch_allowed_scope_rule_accepts_valid_patch(self) -> None:
+        assert PatchAllowedScopeRule().check(make_patch_declaration()) is None
+
+    def test_patch_python_expression_rule_reports_unsupported_syntax(
+        self,
+    ) -> None:
+        violation = PatchPythonExpressionSyntaxRule().check(
+            replace(
+                make_patch_declaration(),
+                body=PatchBody("!value .. other!"),
+            )
+        )
+
+        assert violation is not None
+        assert violation.code == "patch.expression_python_only"
+        assert violation.severity is Severity.ERROR
+
+    def test_patch_modifier_scope_rule_reports_incompatible_modifier(
+        self,
+    ) -> None:
+        violation = CompatiblePatchModifierScopeRule().check(
+            replace(
+                make_patch_declaration(),
+                scope=Scope.LINE,
+                modifiers=PatchModifiers(fx="flash"),
+            )
+        )
+
+        assert violation is not None
+        assert violation.code == "patch.modifier_scope_compatible"
+        assert violation.severity is Severity.ERROR
+
+    def test_patch_validator_aggregates_rule_results(self) -> None:
+        report = PatchValidator().validate(
+            PatchDeclaration(
+                body=PatchBody("!value .. other!"),
+                scope=Scope.LINE,
+                modifiers=PatchModifiers(fx="flash"),
+            )
+        )
+
+        assert tuple(violation.code for violation in report.violations) == (
+            "patch.expression_python_only",
+            "patch.modifier_scope_compatible",
         )

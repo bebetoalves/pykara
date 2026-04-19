@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, replace
 from typing import ClassVar
 
+from pykara.declaration._shared import consume_condition_expression
 from pykara.errors import ModifierParseError
 
 _SNAKE_CASE_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -34,37 +35,6 @@ class TemplateModifiers:
     fx: str | None = None
     when: str | None = None
     unless: str | None = None
-
-
-def _consume_condition_expression(
-    modifier: str,
-    remaining: list[str],
-) -> tuple[str, list[str]]:
-    if not remaining:
-        raise ModifierParseError(
-            modifier,
-            f"expected token or expression after {modifier!r}",
-        )
-
-    first_token = remaining[0]
-    if not first_token.startswith("("):
-        return first_token, remaining[1:]
-
-    expression_tokens: list[str] = []
-    depth = 0
-    rest = list(remaining)
-    while rest:
-        token = rest.pop(0)
-        expression_tokens.append(token)
-        depth += token.count("(")
-        depth -= token.count(")")
-        if depth <= 0:
-            return " ".join(expression_tokens), rest
-
-    raise ModifierParseError(
-        modifier,
-        f"expected closing ')' in expression after {modifier!r}",
-    )
 
 
 class LoopModifier:
@@ -143,7 +113,7 @@ class LoopModifier:
     ) -> tuple[int | str, list[str]]:
         first_token = remaining_tokens[0]
         if first_token.startswith("("):
-            expression, rest = _consume_condition_expression(
+            expression, rest = consume_condition_expression(
                 "loop",
                 remaining_tokens,
             )
@@ -223,7 +193,7 @@ class WhenModifier:
         remaining_tokens: list[str],
         current: TemplateModifiers,
     ) -> tuple[TemplateModifiers, list[str]]:
-        expression, rest = _consume_condition_expression(
+        expression, rest = consume_condition_expression(
             "when",
             remaining_tokens,
         )
@@ -241,7 +211,7 @@ class UnlessModifier:
         remaining_tokens: list[str],
         current: TemplateModifiers,
     ) -> tuple[TemplateModifiers, list[str]]:
-        expression, rest = _consume_condition_expression(
+        expression, rest = consume_condition_expression(
             "unless",
             remaining_tokens,
         )

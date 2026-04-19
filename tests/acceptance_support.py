@@ -7,6 +7,7 @@ from pathlib import Path
 from pykara.adapters import SubtitleDocument
 from pykara.adapters.input.sub_station_alpha import SubStationAlphaReader
 from pykara.data import Event
+from pykara.declaration.patch import PATCH_MODIFIER_REGISTRY
 from pykara.declaration.template import TEMPLATE_MODIFIER_REGISTRY
 from pykara.engine import Engine
 from pykara.parsing import DeclarationParser
@@ -68,6 +69,7 @@ def regenerate_fx_events(path: Path) -> tuple[SubtitleDocument, list[Event]]:
     executable_document = _activate_karaoke_inputs(document)
     declarations = DeclarationParser(
         template_mod_registry=TEMPLATE_MODIFIER_REGISTRY,
+        patch_mod_registry=PATCH_MODIFIER_REGISTRY,
     ).parse(executable_document.events)
     preprocessor = LinePreprocessor(extents=FontMetricsProvider())
     fx_events = Engine(preprocessor, rng_seed=1).apply(

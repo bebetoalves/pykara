@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import ClassVar, Generic, Protocol, TypeVar
 
-from pykara.errors import UnknownModifierError
+from pykara.errors import ModifierParseError, UnknownModifierError
 
 ModifierT = TypeVar("ModifierT")
 
@@ -51,3 +51,36 @@ class ModifierRegistry(Generic[ModifierT]):
                 current,
             )
         return current
+
+
+def consume_condition_expression(
+    modifier: str,
+    remaining: list[str],
+) -> tuple[str, list[str]]:
+    """Consume a token or parenthesized expression after a modifier."""
+
+    if not remaining:
+        raise ModifierParseError(
+            modifier,
+            f"expected token or expression after {modifier!r}",
+        )
+
+    first_token = remaining[0]
+    if not first_token.startswith("("):
+        return first_token, remaining[1:]
+
+    expression_tokens: list[str] = []
+    depth = 0
+    rest = list(remaining)
+    while rest:
+        token = rest.pop(0)
+        expression_tokens.append(token)
+        depth += token.count("(")
+        depth -= token.count(")")
+        if depth <= 0:
+            return " ".join(expression_tokens), rest
+
+    raise ModifierParseError(
+        modifier,
+        f"expected closing ')' in expression after {modifier!r}",
+    )

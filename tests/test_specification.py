@@ -11,6 +11,7 @@ from pykara.specification import (
     EXPRESSION_PROPERTY_SPECIFICATIONS,
     FUNCTION_SPECIFICATIONS,
     MODIFIER_SPECIFICATIONS,
+    PATCH_DECLARATION,
     SCOPE_SPECIFICATIONS,
     TEMPLATE_DECLARATION,
     VARIABLE_SPECIFICATIONS,
@@ -241,6 +242,7 @@ class TestDeclarations:
     def test_registry_contains_expected_declarations(self) -> None:
         assert DECLARATIONS == {
             "template": TEMPLATE_DECLARATION,
+            "patch": PATCH_DECLARATION,
             "code": CODE_DECLARATION,
         }
 
@@ -252,6 +254,11 @@ class TestDeclarations:
     def test_code_scopes_match_contract(self) -> None:
         assert CODE_DECLARATION.allowed_scopes == frozenset(
             {Scope.SETUP, Scope.LINE, Scope.WORD, Scope.SYL}
+        )
+
+    def test_patch_scopes_match_contract(self) -> None:
+        assert PATCH_DECLARATION.allowed_scopes == frozenset(
+            {Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR}
         )
 
 

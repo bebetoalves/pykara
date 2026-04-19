@@ -14,6 +14,7 @@ import pytest
 from pykara.data import Event, Metadata, Style
 from pykara.declaration import Scope
 from pykara.declaration.code import CodeBody
+from pykara.declaration.patch import PatchBody, PatchModifiers
 from pykara.declaration.template import (
     LoopDescriptor,
     TemplateBody,
@@ -30,6 +31,7 @@ from pykara.errors import (
 from pykara.parsing import (
     CodeDeclaration,
     ParsedDeclarations,
+    PatchDeclaration,
     TemplateDeclaration,
 )
 from pykara.processing.font_metrics import TextMeasurement
@@ -247,6 +249,100 @@ class TestCodeRunner:
 
 
 class TestEngineIntegration:
+    def test_patch_injects_tags_before_matching_syllable_text(self) -> None:
+        engine = build_engine()
+        event = make_event()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("S$syl_i:"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(),
+                ),
+            ],
+            patch_syl=[
+                PatchDeclaration(
+                    body=PatchBody("<!syl.text!>"),
+                    scope=Scope.SYL,
+                    modifiers=PatchModifiers(),
+                )
+            ],
+        )
+
+        results = engine.apply(
+            [event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == [
+            "S0:<go>go",
+            "S1:<al>al",
+        ]
+
+    def test_patch_prepend_layer_and_actor_filters_template_output(
+        self,
+    ) -> None:
+        engine = build_engine()
+        event = make_event()
+        declarations = ParsedDeclarations(
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("!layer.set(2)!T:"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(),
+                    actor="lead",
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("U:"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(),
+                    actor="shadow",
+                ),
+            ],
+            patch_line=[
+                PatchDeclaration(
+                    body=PatchBody("P:"),
+                    scope=Scope.LINE,
+                    modifiers=PatchModifiers(
+                        prepend=True,
+                        layer=2,
+                        for_actor="lead",
+                    ),
+                ),
+                PatchDeclaration(
+                    body=PatchBody("I:"),
+                    scope=Scope.LINE,
+                    modifiers=PatchModifiers(layer=2, for_actor="lead"),
+                ),
+                PatchDeclaration(
+                    body=PatchBody("X:"),
+                    scope=Scope.LINE,
+                    modifiers=PatchModifiers(for_actor="missing"),
+                ),
+                PatchDeclaration(
+                    body=PatchBody("A:"),
+                    scope=Scope.LINE,
+                    modifiers=PatchModifiers(layer=2),
+                    actor="ignored",
+                ),
+            ],
+        )
+
+        results = engine.apply(
+            [event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == [
+            "P:I:A:T:goal",
+            "U:goal",
+        ]
+        assert [result.layer for result in results] == [2, 0]
+
     def test_applies_code_setup_line_syl_and_char_templates(self) -> None:
         engine = build_engine()
         event = make_event()

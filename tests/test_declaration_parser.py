@@ -6,12 +6,14 @@ import pytest
 
 from pykara.data import Event
 from pykara.declaration import Scope
+from pykara.declaration.patch import PATCH_MODIFIER_REGISTRY
 from pykara.declaration.template import TEMPLATE_MODIFIER_REGISTRY
 from pykara.errors import DeclarativeParseError
 from pykara.parsing import (
     CodeDeclaration,
     DeclarationParser,
     ParsedDeclarations,
+    PatchDeclaration,
     TemplateDeclaration,
 )
 
@@ -22,6 +24,7 @@ def make_event(
     text: str = "",
     comment: bool = True,
     style: str = "Default",
+    actor: str = "",
 ) -> Event:
     return Event(
         text=text,
@@ -31,7 +34,7 @@ def make_event(
         start_time=0,
         end_time=0,
         comment=comment,
-        actor="",
+        actor=actor,
         margin_l=0,
         margin_r=0,
         margin_t=0,
@@ -42,7 +45,8 @@ def make_event(
 class TestDeclarationParser:
     def build_parser(self) -> DeclarationParser:
         return DeclarationParser(
-            template_mod_registry=TEMPLATE_MODIFIER_REGISTRY
+            template_mod_registry=TEMPLATE_MODIFIER_REGISTRY,
+            patch_mod_registry=PATCH_MODIFIER_REGISTRY,
         )
 
     def test_parse_returns_grouped_declarations(self) -> None:
@@ -63,6 +67,12 @@ class TestDeclarationParser:
                 make_event(
                     effect="template char no_blank no_text",
                     text="char body",
+                    style="StyleB",
+                    actor="lead",
+                ),
+                make_event(
+                    effect="patch char prepend layer 2 for lead when ok",
+                    text="patch body",
                     style="StyleB",
                 ),
                 make_event(
@@ -101,6 +111,7 @@ class TestDeclarationParser:
         syl_template = parsed.syl[0]
         syl_code = parsed.syl[1]
         char_declaration = parsed.char[0]
+        char_patch = parsed.patch_char[0]
         setup_declaration = parsed.setup[0]
 
         assert isinstance(line_declaration, TemplateDeclaration)
@@ -117,6 +128,15 @@ class TestDeclarationParser:
         assert char_declaration.scope is Scope.CHAR
         assert char_declaration.modifiers.no_blank is True
         assert char_declaration.modifiers.no_text is True
+        assert char_declaration.actor == "lead"
+
+        assert isinstance(char_patch, PatchDeclaration)
+        assert char_patch.scope is Scope.CHAR
+        assert char_patch.body.text == "patch body"
+        assert char_patch.modifiers.prepend is True
+        assert char_patch.modifiers.layer == 2
+        assert char_patch.modifiers.for_actor == "lead"
+        assert char_patch.modifiers.when == "ok"
 
         assert isinstance(setup_declaration, CodeDeclaration)
         assert setup_declaration.scope is Scope.SETUP
@@ -203,8 +223,10 @@ class TestDeclarationParser:
         [
             ("template", "explicit scope"),
             ("code", "explicit scope"),
+            ("patch", "explicit scope"),
             ("template mystery", "Invalid scope"),
             ("code mystery", "Invalid scope"),
+            ("patch mystery", "Invalid scope"),
         ],
     )
     def test_parse_rejects_missing_or_invalid_scope(
@@ -230,6 +252,24 @@ class TestDeclarationParser:
 
         assert error_info.value.effect_field == "template line mygroup"
         assert "Unexpected token after template scope" in str(error_info.value)
+
+    def test_parse_rejects_patch_all_selector(self) -> None:
+        parser = self.build_parser()
+
+        with pytest.raises(DeclarativeParseError) as error_info:
+            parser.parse([make_event(effect="patch syl all", text="body")])
+
+        assert error_info.value.effect_field == "patch syl all"
+        assert "'all' is not allowed" in str(error_info.value)
+
+    def test_parse_rejects_template_only_modifiers_on_patch(self) -> None:
+        parser = self.build_parser()
+
+        with pytest.raises(DeclarativeParseError) as error_info:
+            parser.parse([make_event(effect="patch syl loop 2", text="body")])
+
+        assert error_info.value.effect_field == "patch syl loop 2"
+        assert "Unexpected token after patch scope" in str(error_info.value)
 
     def test_parse_rejects_extra_token_after_code_scope(self) -> None:
         parser = self.build_parser()

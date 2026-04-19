@@ -40,11 +40,11 @@ pykara input.ass output.ass --font-dir ./fonts
 
 ### Directives
 
-- [Types](./directives/types.md) — Template and code directives.
+- [Types](./directives/types.md) — Template, patch, and code directives.
 - [Scopes](./directives/scopes.md) — Setup, line, word, syllable, and character scopes.
 - [Variables](./directives/variables.md) — Complete `$variable` reference.
 - [Objects](./directives/objects.md) — Properties available in `!expr!`.
-- [Modifiers](./directives/modifiers.md) — Template modifier keywords.
+- [Modifiers](./directives/modifiers.md) — Directive modifier keywords.
 
 ### Scopes
 
