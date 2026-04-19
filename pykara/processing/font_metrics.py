@@ -15,6 +15,7 @@ from typing import Any, Protocol, cast
 
 from pykara.data import Style
 from pykara.errors import DependencyUnavailableError, PykaraError
+from pykara.processing.font_resolver import resolve_font
 
 
 @dataclass(slots=True, frozen=True)
@@ -45,6 +46,7 @@ class _TextMeasureBackend(Protocol):
         self,
         style: Style,
         text: str,
+        font_dirs: tuple[Path, ...] = (),
     ) -> RawTextMeasurement:
         """Measure raw backend text metrics for one string."""
         ...
@@ -86,28 +88,35 @@ def _load_backend() -> _TextMeasureBackend:
     except ImportError as exc:
         raise PykaraError(
             "FontMetricsProvider missing dependencies. Install "
-            "freetype-py, uharfbuzz, fonttools, and matplotlib."
+            "freetype-py, uharfbuzz, and fonttools."
         ) from exc
 
     import_error = getattr(backend, "IMPORT_ERROR", None)
     if import_error is not None:
         raise PykaraError(
             "FontMetricsProvider missing dependencies. Install "
-            "freetype-py, uharfbuzz, fonttools, and matplotlib."
+            "freetype-py, uharfbuzz, and fonttools."
         ) from import_error
 
     return backend
 
 
-def _measure_raw_text(style: Style, text: str) -> RawTextMeasurement:
+def _measure_raw_text(
+    style: Style,
+    text: str,
+    font_dirs: tuple[Path, ...] = (),
+) -> RawTextMeasurement:
     """Dispatch to the active platform backend and return raw metrics."""
 
     backend = _load_backend()
-    return backend.measure_backend(style, text)
+    return backend.measure_backend(style, text, font_dirs)
 
 
+@dataclass(slots=True, frozen=True)
 class FontMetricsProvider(TextExtentsProvider):
     """Measure subtitle text using the active platform backend."""
+
+    font_dirs: tuple[Path, ...] = ()
 
     def measure(self, style: Style, text: str) -> TextMeasurement:
         """Measure text using the active platform backend.
@@ -120,12 +129,16 @@ class FontMetricsProvider(TextExtentsProvider):
             Measured text extents in ASS script coordinates.
         """
 
-        cache_key = (style, text)
+        cache_key = (style, text, self.font_dirs)
         cached = _MEASUREMENT_CACHE.get(cache_key)
         if cached is not None:
             return cached
 
-        width, height, descent, extlead = _measure_raw_text(style, text)
+        width, height, descent, extlead = _measure_raw_text(
+            style,
+            text,
+            self.font_dirs,
+        )
         measurement = _scale_metrics(
             width=width,
             height=height,
@@ -143,19 +156,21 @@ try:
     import freetype as freetype
     import uharfbuzz as hb
     from fontTools.ttLib import TTFont as TTFont
-    from matplotlib import font_manager as font_manager
 except ImportError as exc:
     _import_error = exc
     freetype = None
     hb = None
     TTFont = None
-    font_manager = None
 
 IMPORT_ERROR = _import_error
 
-_FONT_CACHE: dict[tuple[str, bool, bool], tuple[object, object, str]] = {}
+_FONT_CACHE: dict[
+    tuple[str, bool, bool, tuple[Path, ...]], tuple[object, object, str]
+] = {}
 _FONT_METRICS_CACHE: dict[str, tuple[float, float, float, float]] = {}
-_MEASUREMENT_CACHE: dict[tuple[Style, str], TextMeasurement] = {}
+_MEASUREMENT_CACHE: dict[
+    tuple[Style, str, tuple[Path, ...]], TextMeasurement
+] = {}
 _HB_FEATURES = {"kern": False, "liga": False, "clig": False}
 
 
@@ -205,51 +220,33 @@ def _get_harfbuzz_module() -> object:
     return harfbuzz_module
 
 
-def _get_font_manager_module() -> object:
-    """Return the imported matplotlib font manager after validation."""
-
-    _require_dependencies()
-
-    manager = font_manager
-    if manager is None:
-        raise DependencyUnavailableError(
-            "matplotlib.font_manager is unavailable"
-        )
-
-    return manager
-
-
 def _resolve_font_path(
     family_name: str,
     *,
     is_bold: bool,
     is_italic: bool,
+    font_dirs: tuple[Path, ...] = (),
 ) -> str:
     """Resolve one concrete font path or raise a lookup error."""
 
-    manager = cast(Any, _get_font_manager_module())
-    font_prop = manager.FontProperties(
-        family=family_name,
-        weight="bold" if is_bold else "normal",
-        style="italic" if is_italic else "normal",
+    resolved = resolve_font(
+        family_name,
+        is_bold=is_bold,
+        is_italic=is_italic,
+        font_dirs=font_dirs,
     )
-    try:
-        return str(manager.findfont(font_prop, fallback_to_default=False))
-    except ValueError as exc:
-        raise PykaraError(
-            "FontMetricsProvider: unknown font family "
-            f"{family_name!r}. Did you forget to install this font?"
-        ) from exc
+    return resolved.path
 
 
 def get_font_objects(
     family_name: str,
     is_bold: bool,
     is_italic: bool,
+    font_dirs: tuple[Path, ...] = (),
 ) -> tuple[object, object, str]:
     """Resolve and cache the FreeType/HarfBuzz objects for one font face."""
 
-    cache_key = (family_name, is_bold, is_italic)
+    cache_key = (family_name, is_bold, is_italic, font_dirs)
     cached = _FONT_CACHE.get(cache_key)
     if cached is not None:
         return cached
@@ -260,6 +257,7 @@ def get_font_objects(
         family_name,
         is_bold=is_bold,
         is_italic=is_italic,
+        font_dirs=font_dirs,
     )
 
     ft_face = freetype_module.Face(font_path)
@@ -357,16 +355,18 @@ def _shape_width(hb_font: object, text: str) -> float:
 def measure_backend(
     style: Style,
     text: str,
+    font_dirs: tuple[Path, ...] = (),
 ) -> tuple[float, float, float, float]:
     """Measure text and return raw backend metrics before final ASS scaling."""
 
     if platform == "win32":
-        return _measure_backend_win32(style, text)
+        return _measure_backend_win32(style, text, font_dirs)
 
     ft_face, hb_font, font_path = get_font_objects(
         style.fontname,
         style.bold,
         style.italic,
+        font_dirs,
     )
     _win_ascent, win_descent, cell_height_du, extlead_du = get_gdi_metrics(
         font_path,
@@ -401,6 +401,7 @@ CLIP_DEFAULT_PRECIS = 0
 ANTIALIASED_QUALITY = 4
 DEFAULT_PITCH = 0
 FF_DONTCARE = 0
+FR_PRIVATE = 0x10
 
 
 class SIZE(ctypes.Structure):
@@ -486,11 +487,53 @@ if platform == "win32":
     gdi32.GetTextMetricsW.argtypes = [wintypes.HDC, ctypes.POINTER(TEXTMETRICW)]
     gdi32.GetTextMetricsW.restype = wintypes.BOOL
 
+    gdi32.GetTextFaceW.argtypes = [
+        wintypes.HDC,
+        ctypes.c_int,
+        wintypes.LPWSTR,
+    ]
+    gdi32.GetTextFaceW.restype = ctypes.c_int
+
+    gdi32.AddFontResourceExW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+    ]
+    gdi32.AddFontResourceExW.restype = ctypes.c_int
+
     gdi32.DeleteObject.argtypes = [wintypes.HGDIOBJ]
     gdi32.DeleteObject.restype = wintypes.BOOL
 
     gdi32.DeleteDC.argtypes = [wintypes.HDC]
     gdi32.DeleteDC.restype = wintypes.BOOL
+
+
+_REGISTERED_WIN32_FONT_PATHS: set[str] = set()
+
+
+def _register_font_dirs_win32(font_dirs: tuple[Path, ...]) -> None:
+    """Make explicit font directories visible to this process on Windows."""
+
+    if platform != "win32":
+        return
+
+    for directory in font_dirs:
+        if not directory.is_dir():
+            continue
+
+        for path in directory.rglob("*"):
+            if (
+                not path.is_file()
+                or path.suffix.casefold() not in {".ttf", ".otf"}
+            ):
+                continue
+
+            resolved = str(path.resolve())
+            if resolved in _REGISTERED_WIN32_FONT_PATHS:
+                continue
+
+            if gdi32.AddFontResourceExW(resolved, FR_PRIVATE, None) > 0:
+                _REGISTERED_WIN32_FONT_PATHS.add(resolved)
 
 
 def _make_logfont(style: Style, fontsize: float) -> LOGFONTW:
@@ -515,6 +558,7 @@ def _make_logfont(style: Style, fontsize: float) -> LOGFONTW:
 def _measure_backend_win32(
     style: Style,
     text: str,
+    font_dirs: tuple[Path, ...] = (),
 ) -> tuple[float, float, float, float]:
     """Measure text and return raw backend metrics before final ASS scaling."""
 
@@ -525,6 +569,8 @@ def _measure_backend_win32(
 
     fontsize = style.fontsize * 64.0
     spacing = style.spacing * 64.0
+
+    _register_font_dirs_win32(font_dirs)
 
     dc = gdi32.CreateCompatibleDC(None)
     if not dc:
@@ -544,6 +590,19 @@ def _measure_backend_win32(
         try:
             old_font = gdi32.SelectObject(dc, hfont)
             try:
+                selected_name = ctypes.create_unicode_buffer(32)
+                name_length = gdi32.GetTextFaceW(dc, 32, selected_name)
+                if name_length <= 0:
+                    raise PykaraError(
+                        "FontMetricsProvider backend error: GetTextFaceW failed"
+                    )
+                if selected_name.value.casefold() != style.fontname.casefold():
+                    raise PykaraError(
+                        "FontMetricsProvider: unknown font family "
+                        f"{style.fontname!r}. Windows selected "
+                        f"{selected_name.value!r} instead."
+                    )
+
                 size = SIZE()
 
                 if spacing != 0:

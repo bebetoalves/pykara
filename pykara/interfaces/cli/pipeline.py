@@ -78,6 +78,7 @@ def run_engine(
     document: SubtitleDocument,
     declarations: ParsedDeclarations,
     rng_seed: int | None = None,
+    font_dirs: tuple[Path, ...] = (),
 ) -> list[Event]:
     """Generate fx events through the core engine.
 
@@ -85,12 +86,15 @@ def run_engine(
         document: Loaded subtitle document.
         declarations: Parsed declarations for that document.
         rng_seed: Optional deterministic random seed.
+        font_dirs: Optional directories containing fonts.
 
     Returns:
         Generated ``fx`` events.
     """
 
-    preprocessor = LinePreprocessor(extents=FontMetricsProvider())
+    preprocessor = LinePreprocessor(
+        extents=FontMetricsProvider(font_dirs=font_dirs),
+    )
     return Engine(preprocessor, rng_seed=rng_seed).apply(
         document.events,
         declarations,

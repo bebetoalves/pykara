@@ -42,4 +42,15 @@ def build_parser() -> argparse.ArgumentParser:
             "uses system entropy."
         ),
     )
+    parser.add_argument(
+        "--font-dir",
+        action="append",
+        type=Path,
+        default=[],
+        metavar="PATH",
+        help=(
+            "Directory containing fonts to prefer before user/system fonts. "
+            "Can be passed more than once."
+        ),
+    )
     return parser
