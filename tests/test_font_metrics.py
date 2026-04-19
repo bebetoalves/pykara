@@ -110,8 +110,9 @@ class TestFontMetricsProvider:
         def fake_measure_raw_text(
             style: Style,
             text: str,
+            font_dirs: tuple[object, ...] = (),
         ) -> tuple[float, float, float, float]:
-            del style, text
+            del style, text, font_dirs
             nonlocal raw_calls
             raw_calls += 1
             return (64.0, 64.0, 16.0, 0.0)
@@ -253,16 +254,6 @@ class TestRequireDependencies:
 
         with pytest.raises(DependencyUnavailableError, match="uharfbuzz"):
             font_metrics._get_harfbuzz_module()
-
-    def test_font_manager_getter_raises_when_module_is_none(
-        self,
-        monkeypatch: MonkeyPatch,
-    ) -> None:
-        monkeypatch.setattr(font_metrics, "IMPORT_ERROR", None)
-        monkeypatch.setattr(font_metrics, "font_manager", None)
-
-        with pytest.raises(DependencyUnavailableError, match="font_manager"):
-            font_metrics._get_font_manager_module()
 
 
 class TestLoadBackend:

@@ -35,6 +35,7 @@ Optional flags:
 pykara input.ass output.ass --json output.json   # Export intermediate data
 pykara input.ass output.ass --warn-only          # Downgrade errors to warnings
 pykara input.ass output.ass --seed 42            # Deterministic output
+pykara input.ass output.ass --font-dir ./fonts   # Prefer fonts from a directory
 ```
 
 For comprehensive information about the engine, please refer to the complete documentation available [here](docs/index.md).

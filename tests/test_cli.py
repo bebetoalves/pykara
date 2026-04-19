@@ -378,3 +378,41 @@ class TestCli:
             json.loads(json_path.read_text(encoding="utf-8")),
         )
         assert payload["events"]
+
+    def test_font_dir_option_is_passed_to_engine(
+        self,
+        tmp_path: Path,
+        monkeypatch: MonkeyPatch,
+    ) -> None:
+        input_path = tmp_path / "input.ass"
+        output_path = tmp_path / "output.ass"
+        font_dir = tmp_path / "fonts"
+        font_dir.mkdir()
+        write_ass(input_path)
+        captured_font_dirs: tuple[Path, ...] | None = None
+
+        def fake_run_engine(
+            *_args: object,
+            font_dirs: tuple[Path, ...],
+            **_kwargs: object,
+        ) -> list[object]:
+            nonlocal captured_font_dirs
+            captured_font_dirs = font_dirs
+            return []
+
+        monkeypatch.setattr(cli_main, "run_engine", fake_run_engine)
+        monkeypatch.setattr(
+            "sys.argv",
+            [
+                "pykara",
+                str(input_path),
+                str(output_path),
+                "--font-dir",
+                str(font_dir),
+            ],
+        )
+
+        result = main()
+
+        assert result == 0
+        assert captured_font_dirs == (font_dir.resolve(),)

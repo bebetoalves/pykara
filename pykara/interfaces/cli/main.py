@@ -67,7 +67,12 @@ def main() -> int:
         )
 
     try:
-        fx_events = run_engine(document, declarations, rng_seed=args.seed)
+        fx_events = run_engine(
+            document,
+            declarations,
+            rng_seed=args.seed,
+            font_dirs=tuple(path.resolve() for path in args.font_dir),
+        )
         write_output(document, fx_events, args.output, args.json)
     except ValidationError as error:
         for violation in error.report.errors:
