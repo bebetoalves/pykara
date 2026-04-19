@@ -65,6 +65,10 @@ pykara input.ass output.ass --font-dir ./fonts
 - [math](./tools/math.md) — Run numeric calculations inside `!expr!` and code.
 - [random](./tools/random.md) — Add pseudo-random variation to generated lines.
 
+### Bridges
+
+- [Bridges](./bridges.md) — Use Pykara from editors and external tools.
+
 ## License
 
 Distributed under the MIT License.
