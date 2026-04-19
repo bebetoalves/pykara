@@ -24,6 +24,7 @@ pykara input.ass output.ass
 pykara input.ass output.ass --json output.json
 pykara input.ass output.ass --warn-only
 pykara input.ass output.ass --seed 42
+pykara input.ass output.ass --font-dir ./fonts
 ```
 
 | Flag | Description |
@@ -33,6 +34,7 @@ pykara input.ass output.ass --seed 42
 | `--json PATH` | Also write generated events as JSON. |
 | `--warn-only` | Demote validation errors to warnings and continue. |
 | `--seed N` | Deterministic RNG seed. |
+| `--font-dir PATH` | Prefer fonts from a directory before user/system fonts. Can be repeated. |
 
 ## Documentation
 
