@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import random
-from collections.abc import Callable, Iterator
+import re
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
+from dataclasses import replace
 from types import CodeType
 
 from pykara.data import Event, Metadata, Style
@@ -30,6 +32,8 @@ from pykara.processing.line_preprocessor import (
     PositionedLine,
 )
 from pykara.processing.text_renderer import TextRenderer
+
+_PLAIN_WORD_PATTERN = re.compile(r"[ \t]*[^ \t]+")
 
 
 class _CodeRunner:
@@ -150,7 +154,10 @@ class Engine:
         env.word = None
         env.syl = None
         env.char = None
-        words = self._iter_words(positioned.syllables)
+        words = self._iter_words(
+            positioned.syllables,
+            split_untimed=bool(declarations.word),
+        )
         line_char_count = self._count_text_characters(positioned.syllables)
         env.retime_line_words = tuple(words)
         env.retime_line_syls = tuple(positioned.syllables)
@@ -870,7 +877,12 @@ class Engine:
     def _count_text_characters(self, syllables: tuple[Syllable, ...]) -> int:
         return sum(len(syllable.text) for syllable in syllables)
 
-    def _iter_words(self, syllables: tuple[Syllable, ...]) -> list[Word]:
+    def _iter_words(
+        self,
+        syllables: tuple[Syllable, ...],
+        *,
+        split_untimed: bool = False,
+    ) -> list[Word]:
         words: list[Word] = []
         current_syllables: list[Syllable] = []
 
@@ -880,7 +892,13 @@ class Engine:
             words.append(self._build_word(len(words), tuple(current_syllables)))
             current_syllables.clear()
 
-        for syllable in syllables:
+        iterable_syllables: Iterable[Syllable]
+        if split_untimed:
+            iterable_syllables = self._iter_word_syllables(syllables)
+        else:
+            iterable_syllables = syllables
+
+        for syllable in iterable_syllables:
             if current_syllables and syllable.prespace:
                 append_current()
             current_syllables.append(syllable)
@@ -889,6 +907,155 @@ class Engine:
 
         append_current()
         return words
+
+    def _iter_word_syllables(
+        self,
+        syllables: tuple[Syllable, ...],
+    ) -> Iterator[Syllable]:
+        for syllable in syllables:
+            if not self._should_split_untimed_words(syllable):
+                yield syllable
+                continue
+            yield from self._split_untimed_word_syllable(syllable)
+
+    def _should_split_untimed_words(self, syllable: Syllable) -> bool:
+        return (
+            syllable.tag == ""
+            and syllable.style is not None
+            and any(char in syllable.trimmed_text for char in (" ", "\t"))
+        )
+
+    def _split_untimed_word_syllable(
+        self,
+        syllable: Syllable,
+    ) -> Iterator[Syllable]:
+        segments = self._plain_word_segments(syllable.text)
+        if len(segments) <= 1:
+            yield syllable
+            return
+
+        cursor = syllable.left - syllable.prespacewidth
+        scale = self._resolve_syllable_x_scale(syllable)
+        for index, segment_text in enumerate(segments):
+            prespace, trimmed_text, postspace = self._split_horizontal_spaces(
+                segment_text,
+            )
+            prespacewidth = self._measure_scaled_text_width(
+                syllable,
+                prespace,
+                scale,
+            )
+            width = self._measure_scaled_text_width(
+                syllable,
+                trimmed_text,
+                scale,
+            )
+            postspacewidth = self._measure_scaled_text_width(
+                syllable,
+                postspace,
+                scale,
+            )
+            left = cursor + prespacewidth
+            right = left + width
+            center = left + width / 2
+
+            yield replace(
+                syllable,
+                index=index,
+                raw_text=segment_text,
+                text=segment_text,
+                trimmed_text=trimmed_text,
+                prespace=prespace,
+                postspace=postspace,
+                start_time=syllable.start_time,
+                end_time=syllable.end_time,
+                duration=syllable.duration,
+                kdur=syllable.kdur,
+                tag=syllable.tag,
+                inline_fx=syllable.inline_fx,
+                highlights=list(syllable.highlights),
+                width=width,
+                prespacewidth=prespacewidth,
+                postspacewidth=postspacewidth,
+                left=left,
+                center=center,
+                right=right,
+                x=self._resolve_segment_anchor_x(syllable, left, center, right),
+            )
+            cursor = right + postspacewidth
+
+    def _plain_word_segments(self, text: str) -> list[str]:
+        matches = list(_PLAIN_WORD_PATTERN.finditer(text))
+        return [
+            text[
+                match.start() : self._plain_word_segment_end(
+                    text,
+                    matches,
+                    index,
+                )
+            ]
+            for index, match in enumerate(matches)
+        ]
+
+    def _plain_word_segment_end(
+        self,
+        text: str,
+        matches: list[re.Match[str]],
+        index: int,
+    ) -> int:
+        if index + 1 < len(matches):
+            return matches[index].end()
+        return len(text)
+
+    def _resolve_syllable_x_scale(self, syllable: Syllable) -> float:
+        if syllable.style is None or syllable.trimmed_text == "":
+            return 1.0
+        measured_width = self._preprocessor.extents.measure(
+            syllable.style,
+            syllable.trimmed_text,
+        ).width
+        if measured_width == 0:
+            return 1.0
+        return syllable.width / measured_width
+
+    def _measure_scaled_text_width(
+        self,
+        syllable: Syllable,
+        text: str,
+        scale: float,
+    ) -> float:
+        if syllable.style is None or text == "":
+            return 0.0
+        return (
+            self._preprocessor.extents.measure(
+                syllable.style,
+                text,
+            ).width
+            * scale
+        )
+
+    def _split_horizontal_spaces(self, text: str) -> tuple[str, str, str]:
+        prespace_length = len(text) - len(text.lstrip(" \t"))
+        postspace_length = len(text) - len(text.rstrip(" \t"))
+        trimmed_end = len(text) - postspace_length
+        return (
+            text[:prespace_length],
+            text[prespace_length:trimmed_end],
+            text[trimmed_end:],
+        )
+
+    def _resolve_segment_anchor_x(
+        self,
+        source: Syllable,
+        left: float,
+        center: float,
+        right: float,
+    ) -> float:
+        if source.x == source.left:
+            return left
+        if source.x == source.right:
+            return right
+        return center
 
     def _build_word(self, index: int, syllables: tuple[Syllable, ...]) -> Word:
         first = syllables[0]
