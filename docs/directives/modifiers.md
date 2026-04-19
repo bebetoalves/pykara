@@ -1,7 +1,7 @@
 # Modifiers
 
-Modifiers refine how a `template` directive runs. They follow the scope
-token in the `Effect` field.
+Modifiers refine how a `template` or `patch` directive runs. They follow
+the scope token in the `Effect` field.
 
 ```ass
 template syl loop 3 no_blank
@@ -9,14 +9,17 @@ template syl loop 3 no_blank
 
 ## Reference
 
-| Modifier | Argument | Scopes | Purpose |
-|------------|----------|-------------------------------|----------------------------------------------------|
-| `loop` | yes | `line`, `word`, `syl`, `char` | Repeat the template N times. |
-| `no_blank` | no | `line`, `word`, `syl`, `char` | Skip empty lines, words, syllables, or characters. |
-| `no_text` | no | `line`, `word`, `syl`, `char` | Do not append source text to the output. |
-| `fx` | yes | `syl` | Match only syllables with the given inline-fx tag. |
-| `when` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is truthy. |
-| `unless` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is falsy. |
+| Modifier | Directives | Argument | Scopes | Purpose |
+|----------|------------|----------|-------------------------------|----------------------------------------------------|
+| `loop` | `template` | yes | `line`, `word`, `syl`, `char` | Repeat the template N times. |
+| `no_blank` | `template` | no | `line`, `word`, `syl`, `char` | Skip empty lines, words, syllables, or characters. |
+| `no_text` | `template` | no | `line`, `word`, `syl`, `char` | Do not append source text to the output. |
+| `prepend` | `patch` | no | `line`, `word`, `syl`, `char` | Insert before the template body. |
+| `layer` | `patch` | integer | `line`, `word`, `syl`, `char` | Match templates that set this output layer. |
+| `for` | `patch` | actor name | `line`, `word`, `syl`, `char` | Match templates with this actor. |
+| `fx` | `template`, `patch` | yes | `syl` | Match only syllables with the given inline-fx tag. |
+| `when` | `template`, `patch` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is truthy. |
+| `unless` | `template`, `patch` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is falsy. |
 
 ## `loop`
 
@@ -48,6 +51,33 @@ template syl fx glow
 ```
 
 Match only syllables tagged with the given inline-fx name.
+
+## `prepend`
+
+```ass
+patch syl prepend
+```
+
+Insert the patch body before the template body instead of before the
+source object text.
+
+## `layer`
+
+```ass
+patch syl layer 2
+```
+
+Apply the patch only when the generated line has the given layer. This is
+checked after the template body has run, so `!layer.set(2)!` inside the
+template can select the patch.
+
+## `for`
+
+```ass
+patch syl for lead
+```
+
+Apply the patch only to templates whose `Name`/actor field is `lead`.
 
 ## `when` / `unless`
 

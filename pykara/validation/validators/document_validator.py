@@ -18,6 +18,7 @@ from pykara.validation.validators.cross_validator import CrossValidator
 from pykara.validation.validators.event_validator import EventValidator
 from pykara.validation.validators.karaoke_validator import KaraokeValidator
 from pykara.validation.validators.metadata_validator import MetadataValidator
+from pykara.validation.validators.patch_validator import PatchValidator
 from pykara.validation.validators.style_validator import StyleValidator
 from pykara.validation.validators.template_validator import TemplateValidator
 
@@ -34,6 +35,7 @@ class DocumentValidator:
         self._karaoke_parser = KaraokeParser()
         self._karaoke_validator = KaraokeValidator()
         self._template_validator = TemplateValidator()
+        self._patch_validator = PatchValidator()
         self._code_validator = CodeValidator()
         self._cross_validator = CrossValidator()
 
@@ -74,6 +76,18 @@ class DocumentValidator:
             report = report.merge(
                 self._template_validator.validate(declaration)
             )
+
+        for declaration in declarations.patch_line:
+            report = report.merge(self._patch_validator.validate(declaration))
+
+        for declaration in declarations.patch_word:
+            report = report.merge(self._patch_validator.validate(declaration))
+
+        for declaration in declarations.patch_syl:
+            report = report.merge(self._patch_validator.validate(declaration))
+
+        for declaration in declarations.patch_char:
+            report = report.merge(self._patch_validator.validate(declaration))
 
         for declaration in declarations.setup:
             report = report.merge(self._code_validator.validate(declaration))

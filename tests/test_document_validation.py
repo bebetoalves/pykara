@@ -6,10 +6,12 @@ from pykara.adapters import SubtitleDocument
 from pykara.data import Event, Metadata, Style
 from pykara.declaration import Scope
 from pykara.declaration.code import CodeBody
+from pykara.declaration.patch import PatchBody, PatchModifiers
 from pykara.declaration.template import TemplateBody, TemplateModifiers
 from pykara.parsing import (
     CodeDeclaration,
     ParsedDeclarations,
+    PatchDeclaration,
     TemplateDeclaration,
 )
 from pykara.validation.validators import CrossValidator, DocumentValidator
@@ -77,6 +79,22 @@ def make_template_declaration(
         body=TemplateBody(text),
         scope=scope,
         modifiers=modifiers or TemplateModifiers(),
+        actor="lead",
+    )
+
+
+def make_patch_declaration(
+    *,
+    text: str = "{\\bord4}",
+    scope: Scope = Scope.SYL,
+    modifiers: PatchModifiers | None = None,
+    actor: str = "lead",
+) -> PatchDeclaration:
+    return PatchDeclaration(
+        body=PatchBody(text),
+        scope=scope,
+        modifiers=modifiers or PatchModifiers(),
+        actor=actor,
     )
 
 
@@ -164,6 +182,58 @@ class TestCrossValidator:
 
         assert tuple(violation.code for violation in report.violations) == (
             "cross.fx_scope_allowed",
+        )
+
+    def test_accepts_patch_with_compatible_template(self) -> None:
+        declarations = ParsedDeclarations(
+            syl=[make_template_declaration()],
+            patch_syl=[make_patch_declaration(actor="unrelated")],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert report.violations == ()
+
+    def test_reports_patch_for_actor_without_compatible_template(self) -> None:
+        declarations = ParsedDeclarations(
+            syl=[make_template_declaration()],
+            patch_syl=[
+                make_patch_declaration(
+                    modifiers=PatchModifiers(for_actor="missing")
+                )
+            ],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.code for violation in report.violations) == (
+            "cross.patch_template_compatible",
+        )
+
+    def test_reports_patch_without_compatible_template(self) -> None:
+        declarations = ParsedDeclarations(
+            syl=[make_template_declaration()],
+            patch_word=[make_patch_declaration(scope=Scope.WORD)],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.code for violation in report.violations) == (
+            "cross.patch_template_compatible",
+        )
+
+    def test_reports_patch_variable_used_outside_scope(self) -> None:
+        declarations = ParsedDeclarations(
+            line=[make_template_declaration(scope=Scope.LINE)],
+            patch_line=[
+                make_patch_declaration(text="$syl_x", scope=Scope.LINE)
+            ],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.code for violation in report.violations) == (
+            "cross.variable_scope_allowed",
         )
 
 

@@ -8,6 +8,7 @@ from pykara.data import Event
 from pykara.declaration import Scope
 from pykara.declaration._shared import ModifierRegistry
 from pykara.declaration.code import CodeBody
+from pykara.declaration.patch import PatchBody, PatchModifiers
 from pykara.declaration.template import TemplateBody, TemplateModifiers
 from pykara.errors import (
     DeclarativeParseError,
@@ -29,6 +30,10 @@ def _empty_template_declarations() -> list[TemplateDeclaration]:
     return []
 
 
+def _empty_patch_declarations() -> list[PatchDeclaration]:
+    return []
+
+
 def _empty_active_styles() -> set[str]:
     return set()
 
@@ -41,6 +46,7 @@ class TemplateDeclaration:
     scope: Scope
     modifiers: TemplateModifiers
     style: str = ""
+    actor: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +56,17 @@ class CodeDeclaration:
     body: CodeBody
     scope: Scope
     style: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class PatchDeclaration:
+    """One parsed patch declaration."""
+
+    body: PatchBody
+    scope: Scope
+    modifiers: PatchModifiers
+    style: str = ""
+    actor: str = ""
 
 
 @dataclass(slots=True)
@@ -71,6 +88,18 @@ class ParsedDeclarations:
     char: list[TemplateDeclaration] = field(
         default_factory=_empty_template_declarations
     )
+    patch_line: list[PatchDeclaration] = field(
+        default_factory=_empty_patch_declarations
+    )
+    patch_word: list[PatchDeclaration] = field(
+        default_factory=_empty_patch_declarations
+    )
+    patch_syl: list[PatchDeclaration] = field(
+        default_factory=_empty_patch_declarations
+    )
+    patch_char: list[PatchDeclaration] = field(
+        default_factory=_empty_patch_declarations
+    )
     active_styles: set[str] = field(default_factory=_empty_active_styles)
 
 
@@ -80,8 +109,10 @@ class DeclarationParser:
     def __init__(
         self,
         template_mod_registry: ModifierRegistry[TemplateModifiers],
+        patch_mod_registry: ModifierRegistry[PatchModifiers],
     ) -> None:
         self._template_mod_registry = template_mod_registry
+        self._patch_mod_registry = patch_mod_registry
 
     def parse(self, events: list[Event]) -> ParsedDeclarations:
         """Parse template and code declarations from commented events.
@@ -111,7 +142,7 @@ class DeclarationParser:
 
     def _parse_event(
         self, event: Event
-    ) -> TemplateDeclaration | CodeDeclaration | None:
+    ) -> TemplateDeclaration | CodeDeclaration | PatchDeclaration | None:
         """Parse one event when it contains a supported declaration."""
 
         if not event.comment:
@@ -140,10 +171,17 @@ class DeclarationParser:
                 ),
             )
 
-        declaration_style, remaining_tokens = self._parse_style_selector(
-            event=event,
-            remaining_tokens=remaining_tokens,
-        )
+        if declaration_name == "patch":
+            declaration_style, remaining_tokens = self._parse_patch_style(
+                event=event,
+                effect_field=event.effect,
+                remaining_tokens=remaining_tokens,
+            )
+        else:
+            declaration_style, remaining_tokens = self._parse_style_selector(
+                event=event,
+                remaining_tokens=remaining_tokens,
+            )
 
         if declaration_name == "template":
             modifiers = self._parse_template_modifiers(
@@ -155,6 +193,20 @@ class DeclarationParser:
                 scope=scope,
                 modifiers=modifiers,
                 style=declaration_style,
+                actor=event.actor,
+            )
+
+        if declaration_name == "patch":
+            modifiers = self._parse_patch_modifiers(
+                effect_field=event.effect,
+                tokens=remaining_tokens,
+            )
+            return PatchDeclaration(
+                body=PatchBody(event.text),
+                scope=scope,
+                modifiers=modifiers,
+                style=declaration_style,
+                actor=event.actor,
             )
 
         if remaining_tokens:
@@ -181,6 +233,22 @@ class DeclarationParser:
         if remaining_tokens and remaining_tokens[0].lower() == "all":
             return "", remaining_tokens[1:]
 
+        return event.style, remaining_tokens
+
+    def _parse_patch_style(
+        self,
+        *,
+        event: Event,
+        effect_field: str,
+        remaining_tokens: list[str],
+    ) -> tuple[str, list[str]]:
+        """Return the patch style filter and reject unsupported all selector."""
+
+        if remaining_tokens and remaining_tokens[0].lower() == "all":
+            raise DeclarativeParseError(
+                effect_field=effect_field,
+                message="'all' is not allowed for patch declarations",
+            )
         return event.style, remaining_tokens
 
     def _parse_scope(
@@ -231,6 +299,24 @@ class DeclarationParser:
                 ),
             ) from error
 
+    def _parse_patch_modifiers(
+        self,
+        *,
+        effect_field: str,
+        tokens: list[str],
+    ) -> PatchModifiers:
+        """Parse patch modifiers through the injected registry."""
+
+        try:
+            return self._patch_mod_registry.parse(tokens)
+        except UnknownModifierError as error:
+            raise DeclarativeParseError(
+                effect_field=effect_field,
+                message=(
+                    f"Unexpected token after patch scope: {error.modifier!r}"
+                ),
+            ) from error
+
     def _scope_from_token(self, token: str) -> Scope | None:
         """Resolve one scope token using the shared specifications."""
 
@@ -242,7 +328,7 @@ class DeclarationParser:
     def _append_declaration(
         self,
         parsed: ParsedDeclarations,
-        declaration: TemplateDeclaration | CodeDeclaration,
+        declaration: TemplateDeclaration | CodeDeclaration | PatchDeclaration,
     ) -> None:
         """Append one parsed declaration to the matching scope bucket."""
 
@@ -254,17 +340,29 @@ class DeclarationParser:
             return
 
         if declaration.scope is Scope.LINE:
-            parsed.line.append(declaration)
+            if isinstance(declaration, PatchDeclaration):
+                parsed.patch_line.append(declaration)
+            else:
+                parsed.line.append(declaration)
             return
 
         if declaration.scope is Scope.WORD:
-            parsed.word.append(declaration)
+            if isinstance(declaration, PatchDeclaration):
+                parsed.patch_word.append(declaration)
+            else:
+                parsed.word.append(declaration)
             return
 
         if declaration.scope is Scope.SYL:
-            parsed.syl.append(declaration)
+            if isinstance(declaration, PatchDeclaration):
+                parsed.patch_syl.append(declaration)
+            else:
+                parsed.syl.append(declaration)
             return
 
+        if isinstance(declaration, PatchDeclaration):
+            parsed.patch_char.append(declaration)
+            return
         if not isinstance(declaration, TemplateDeclaration):
             message = "CHAR scope is only valid for template declarations."
             raise InternalConsistencyError(message)

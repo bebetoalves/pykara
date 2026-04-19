@@ -4,6 +4,7 @@ from pykara.parsing.declaration_parser import (
     CodeDeclaration,
     DeclarationParser,
     ParsedDeclarations,
+    PatchDeclaration,
     TemplateDeclaration,
 )
 from pykara.parsing.karaoke_parser import KaraokeParser
@@ -13,5 +14,6 @@ __all__ = [
     "DeclarationParser",
     "KaraokeParser",
     "ParsedDeclarations",
+    "PatchDeclaration",
     "TemplateDeclaration",
 ]

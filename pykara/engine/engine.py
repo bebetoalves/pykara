@@ -11,6 +11,7 @@ from types import CodeType
 
 from pykara.data import Event, Metadata, Style
 from pykara.data.events.karaoke import Karaoke, Syllable, Word
+from pykara.declaration import Scope
 from pykara.engine.variable_context import (
     Environment,
     GeneratedLine,
@@ -24,6 +25,7 @@ from pykara.errors import (
 from pykara.parsing import (
     CodeDeclaration,
     ParsedDeclarations,
+    PatchDeclaration,
     TemplateDeclaration,
 )
 from pykara.parsing.karaoke_parser import KaraokeParser
@@ -211,6 +213,7 @@ class Engine:
                 self._render_line_template(
                     declaration,
                     event,
+                    declarations,
                     env,
                     descendants,
                 )
@@ -244,6 +247,7 @@ class Engine:
         self,
         declaration: TemplateDeclaration,
         source_event: Event,
+        declarations: ParsedDeclarations,
         env: Environment,
         descendants: Callable[[], list[Event]] | None,
     ) -> list[Event]:
@@ -255,7 +259,12 @@ class Engine:
         return self._loop_render(
             declaration,
             env,
-            lambda: self._build_line_event(declaration, source_event, env),
+            lambda: self._build_line_event(
+                declaration,
+                source_event,
+                declarations,
+                env,
+            ),
             descendants,
         )
 
@@ -263,6 +272,7 @@ class Engine:
         self,
         declaration: TemplateDeclaration,
         source_event: Event,
+        declarations: ParsedDeclarations,
         syllable: Syllable,
         env: Environment,
         descendants: Callable[[], list[Event]] | None,
@@ -275,6 +285,7 @@ class Engine:
             lambda: self._build_syllable_event(
                 declaration,
                 source_event,
+                declarations,
                 syllable,
                 env,
             ),
@@ -285,6 +296,7 @@ class Engine:
         self,
         declaration: TemplateDeclaration,
         source_event: Event,
+        declarations: ParsedDeclarations,
         word: Word,
         env: Environment,
         descendants: Callable[[], list[Event]] | None,
@@ -297,6 +309,7 @@ class Engine:
             lambda: self._build_word_event(
                 declaration,
                 source_event,
+                declarations,
                 word,
                 env,
             ),
@@ -307,6 +320,7 @@ class Engine:
         self,
         declaration: TemplateDeclaration,
         source_event: Event,
+        declarations: ParsedDeclarations,
         char_syllable: Syllable,
         env: Environment,
     ) -> list[Event]:
@@ -318,6 +332,7 @@ class Engine:
             lambda: self._build_char_event(
                 declaration,
                 source_event,
+                declarations,
                 char_syllable,
                 env,
             ),
@@ -393,6 +408,7 @@ class Engine:
                         self._render_word_template(
                             declaration,
                             event,
+                            declarations,
                             word,
                             env,
                             descendants,
@@ -482,6 +498,7 @@ class Engine:
                         self._render_syllable_template(
                             declaration,
                             event,
+                            declarations,
                             syllable,
                             env,
                             descendants,
@@ -565,6 +582,7 @@ class Engine:
                         self._render_char_template(
                             declaration,
                             event,
+                            declarations,
                             char_syllable,
                             env,
                         )
@@ -699,11 +717,13 @@ class Engine:
         self,
         declaration: TemplateDeclaration,
         source_event: Event,
+        declarations: ParsedDeclarations,
         env: Environment,
     ) -> Event:
         return self._build_scoped_event(
             declaration=declaration,
             source_event=source_event,
+            patches=declarations.patch_line,
             styleref=env.styles[source_event.style],
             suffix_text=self._strip_karaoke_text(source_event.text),
             env=env,
@@ -713,12 +733,14 @@ class Engine:
         self,
         declaration: TemplateDeclaration,
         source_event: Event,
+        declarations: ParsedDeclarations,
         syllable: Syllable,
         env: Environment,
     ) -> Event:
         return self._build_scoped_event(
             declaration=declaration,
             source_event=source_event,
+            patches=declarations.patch_syl,
             styleref=syllable.style or env.styles[source_event.style],
             suffix_text=syllable.text,
             env=env,
@@ -728,12 +750,14 @@ class Engine:
         self,
         declaration: TemplateDeclaration,
         source_event: Event,
+        declarations: ParsedDeclarations,
         word: Word,
         env: Environment,
     ) -> Event:
         return self._build_scoped_event(
             declaration=declaration,
             source_event=source_event,
+            patches=declarations.patch_word,
             styleref=word.style or env.styles[source_event.style],
             suffix_text=word.text,
             env=env,
@@ -743,12 +767,14 @@ class Engine:
         self,
         declaration: TemplateDeclaration,
         source_event: Event,
+        declarations: ParsedDeclarations,
         char_syllable: Syllable,
         env: Environment,
     ) -> Event:
         return self._build_scoped_event(
             declaration=declaration,
             source_event=source_event,
+            patches=declarations.patch_char,
             styleref=char_syllable.style or env.styles[source_event.style],
             suffix_text=char_syllable.text,
             env=env,
@@ -759,6 +785,7 @@ class Engine:
         *,
         declaration: TemplateDeclaration,
         source_event: Event,
+        patches: list[PatchDeclaration],
         styleref: Style,
         suffix_text: str,
         env: Environment,
@@ -771,14 +798,103 @@ class Engine:
         env.line = output
         env.declaration = "template"
         env.begin_template_evaluation(declaration.scope)
-        output.text = self._renderer.render(declaration.body.text, env)
+        template_text = self._renderer.render(declaration.body.text, env)
+        prepend_text = self._render_patch_text(
+            template=declaration,
+            source_event=source_event,
+            patches=patches,
+            env=env,
+            prepend=True,
+        )
+        injected_text = self._render_patch_text(
+            template=declaration,
+            source_event=source_event,
+            patches=patches,
+            env=env,
+            prepend=False,
+        )
+        if declaration.scope is Scope.LINE:
+            output.text = prepend_text + injected_text + template_text
+        else:
+            output.text = prepend_text + template_text + injected_text
         if not declaration.modifiers.no_text:
             output.text += suffix_text
         return output.to_event()
 
+    def _render_patch_text(
+        self,
+        *,
+        template: TemplateDeclaration,
+        source_event: Event,
+        patches: list[PatchDeclaration],
+        env: Environment,
+        prepend: bool,
+    ) -> str:
+        rendered: list[str] = []
+        for patch in patches:
+            if patch.modifiers.prepend is not prepend:
+                continue
+            if not self._patch_applies_to_template(
+                patch=patch,
+                template=template,
+                source_event=source_event,
+                env=env,
+            ):
+                continue
+            rendered.append(self._renderer.render(patch.body.text, env))
+        return "".join(rendered)
+
+    def _patch_applies_to_template(
+        self,
+        *,
+        patch: PatchDeclaration,
+        template: TemplateDeclaration,
+        source_event: Event,
+        env: Environment,
+    ) -> bool:
+        if patch.scope is not template.scope:
+            return False
+        if not self._declaration_applies_to_style(patch, source_event):
+            return False
+        if (
+            patch.modifiers.for_actor is not None
+            and patch.modifiers.for_actor != template.actor
+        ):
+            return False
+        if patch.modifiers.layer is not None:
+            if env.line is None or env.line.layer != patch.modifiers.layer:
+                return False
+        if patch.modifiers.fx is not None:
+            if env.syl is None or env.syl.inline_fx != patch.modifiers.fx:
+                return False
+        if not self._passes_patch_conditions(patch, env):
+            return False
+        return True
+
     def _passes_conditions(
         self,
         declaration: TemplateDeclaration,
+        env: Environment,
+    ) -> bool:
+        if declaration.modifiers.when is not None and not bool(
+            self._renderer.evaluate_expression(
+                declaration.modifiers.when,
+                env,
+            )
+        ):
+            return False
+        if declaration.modifiers.unless is not None and bool(
+            self._renderer.evaluate_expression(
+                declaration.modifiers.unless,
+                env,
+            )
+        ):
+            return False
+        return True
+
+    def _passes_patch_conditions(
+        self,
+        declaration: PatchDeclaration,
         env: Environment,
     ) -> bool:
         if declaration.modifiers.when is not None and not bool(
@@ -811,7 +927,7 @@ class Engine:
 
     def _declaration_applies_to_style(
         self,
-        declaration: TemplateDeclaration | CodeDeclaration,
+        declaration: TemplateDeclaration | CodeDeclaration | PatchDeclaration,
         event: Event,
     ) -> bool:
         return not declaration.style or declaration.style == event.style
