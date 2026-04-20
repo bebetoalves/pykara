@@ -135,6 +135,7 @@ EXPECTED_EXPRESSION_OBJECTS = {
     "char",
     "style",
     "metadata",
+    "palette",
 }
 
 EXPECTED_LINE_PROPERTIES = {

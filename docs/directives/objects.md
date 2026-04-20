@@ -115,3 +115,21 @@ Inside `!expr!`, runtime data is exposed through objects.
 |----------|-------------|
 | `res_x` | Script resolution width. |
 | `res_y` | Script resolution height. |
+
+### `palette`
+
+Tailwind color palette exposed as ASS colors. Choose a color and shade:
+
+```ass
+{\1c!palette.red[500]!}
+```
+
+Available colors:
+
+`slate`, `gray`, `zinc`, `neutral`, `stone`, `red`, `orange`, `amber`,
+`yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`,
+`indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`.
+
+Available shades:
+
+`50`, `100`, `200`, `300`, `400`, `500`, `600`, `700`, `800`, `900`, `950`.
