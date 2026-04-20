@@ -81,6 +81,37 @@ class TestKaraokeParser:
         assert second_syllable.end_time == 500
         assert second_syllable.duration == 500 - 200
 
+    def test_parse_keeps_consecutive_leading_tags_as_blank_syllable(
+        self,
+    ) -> None:
+        parser = KaraokeParser()
+
+        karaoke = parser.parse(make_event("{\\k23}{\\k22}ka{\\k25}na"))
+
+        first_syllable = karaoke.syllables[0]
+        second_syllable = karaoke.syllables[1]
+        third_syllable = karaoke.syllables[2]
+
+        assert karaoke.text == "kana"
+        assert len(karaoke.syllables) == 3
+        assert first_syllable.index == 0
+        assert first_syllable.tag == "\\k23"
+        assert first_syllable.text == ""
+        assert first_syllable.start_time == 0
+        assert first_syllable.end_time == 230
+        assert first_syllable.duration == 230
+        assert second_syllable.index == 1
+        assert second_syllable.tag == "\\k22"
+        assert second_syllable.text == "ka"
+        assert second_syllable.start_time == 230
+        assert second_syllable.end_time == 450
+        assert second_syllable.duration == 220
+        assert third_syllable.index == 2
+        assert third_syllable.tag == "\\k25"
+        assert third_syllable.text == "na"
+        assert third_syllable.start_time == 450
+        assert third_syllable.end_time == 700
+
     def test_parse_supports_uppercase_k_and_kf_tags(self) -> None:
         parser = KaraokeParser()
 

@@ -263,14 +263,30 @@ class TestDocumentValidator:
             violation.code for violation in report.violations
         }
 
-    def test_parses_and_validates_karaoke_syllables(self) -> None:
+    def test_accepts_timed_blank_karaoke_syllables(self) -> None:
         document = make_document(events=[make_event(text="{\\k20}   ")])
 
         report = DocumentValidator().validate(document, ParsedDeclarations())
 
-        assert tuple(violation.code for violation in report.violations) == (
-            "karaoke.timed_text_required",
+        assert report.violations == ()
+
+    def test_accepts_consecutive_leading_karaoke_tags_as_blank_syllable(
+        self,
+    ) -> None:
+        document = make_document(
+            events=[
+                make_event(
+                    text=(
+                        "{\\k23}{\\k22}ka{\\k25}na{\\k77}shii "
+                        "{\\k25}to{\\k43}ki"
+                    )
+                )
+            ]
         )
+
+        report = DocumentValidator().validate(document, ParsedDeclarations())
+
+        assert report.violations == ()
 
     def test_skips_non_karaoke_events_for_karaoke_validation(self) -> None:
         document = make_document(events=[make_event(text="plain text")])

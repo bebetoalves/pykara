@@ -115,7 +115,7 @@ class KaraokeParser:
         current_inline_fx = ""
         current_time = 0
 
-        for raw_index, raw_syllable in enumerate(raw_syllables):
+        for raw_syllable in raw_syllables:
             visible_text = self._strip_override_tags(raw_syllable.text)
             prespace, trimmed_text, postspace = self._split_spaces(visible_text)
 
@@ -123,7 +123,7 @@ class KaraokeParser:
             if inline_fx != "":
                 current_inline_fx = inline_fx
 
-            if raw_index > 0 and self._is_multi_highlight(trimmed_text):
+            if syllables and self._is_multi_highlight(trimmed_text):
                 previous = syllables[-1]
                 highlight = Highlight(
                     start_time=current_time,
