@@ -24,6 +24,7 @@ from pykara.engine.engine import Engine, _CodeRunner
 from pykara.engine.variable_context import Environment
 from pykara.errors import (
     BoundMethodInExpressionError,
+    ReservedNameError,
     TemplateCodeError,
     TemplateRuntimeError,
     UnknownVariableError,
@@ -158,7 +159,8 @@ class TestCodeRunnerCaching:
             _feature_version: int = -1,
         ) -> CodeType:
             nonlocal compile_calls
-            compile_calls += 1
+            if mode == "exec" and not flags:
+                compile_calls += 1
             return original_compile(
                 source,
                 filename,
@@ -246,6 +248,12 @@ class TestCodeRunner:
 
         with pytest.raises(TemplateRuntimeError):
             runner.run("1 / 0", make_env())
+
+    def test_rejects_assignment_to_reserved_name(self) -> None:
+        runner = _CodeRunner()
+
+        with pytest.raises(ReservedNameError, match="reserved name 'color'"):
+            runner.run("color = palette.purple[800]", make_env())
 
 
 class TestEngineIntegration:
@@ -342,6 +350,43 @@ class TestEngineIntegration:
             "U:goal",
         ]
         assert [result.layer for result in results] == [2, 0]
+
+    def test_template_uses_natural_layer_unless_relayer_changes_it(
+        self,
+    ) -> None:
+        engine = build_engine()
+        event = make_event()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("A:"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(),
+                    layer=4,
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("!layer.set(7)!B:"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(),
+                    layer=5,
+                ),
+            ]
+        )
+
+        results = engine.apply(
+            [event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == [
+            "A:go",
+            "B:go",
+            "A:al",
+            "B:al",
+        ]
+        assert [result.layer for result in results] == [4, 7, 4, 7]
 
     def test_applies_code_setup_line_syl_and_char_templates(self) -> None:
         engine = build_engine()

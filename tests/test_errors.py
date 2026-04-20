@@ -21,6 +21,7 @@ from pykara.errors import (
     ParsingError,
     ProcessingError,
     PykaraError,
+    ReservedNameError,
     TemplateCodeError,
     TemplateExecutionCancelledError,
     TemplateRuntimeError,
@@ -253,6 +254,20 @@ class TestTemplateRuntimeError:
         cause = ZeroDivisionError("division by zero")
         err = TemplateRuntimeError("1/0", cause)
         assert "division by zero" in str(err)
+
+
+class TestReservedNameError:
+    def test_stores_fields(self) -> None:
+        err = ReservedNameError("color", "color = '#fff'")
+        assert err.name == "color"
+        assert err.source == "color = '#fff'"
+
+    def test_inherits_from_engine_error(self) -> None:
+        assert issubclass(ReservedNameError, EngineError)
+
+    def test_message_contains_name(self) -> None:
+        err = ReservedNameError("color", "color = '#fff'")
+        assert "color" in str(err)
 
 
 class TestUnknownVariableError:

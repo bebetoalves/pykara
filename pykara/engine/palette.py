@@ -295,6 +295,7 @@ _PALETTE_HEX: dict[str, dict[int, str]] = {
     },
 }
 
+
 def _hex_to_ass(value: str) -> str:
     red = int(value[1:3], 16)
     green = int(value[3:5], 16)
@@ -350,17 +351,14 @@ class Palette:
 
     def __init__(self) -> None:
         self._colors: dict[str, PaletteColor] = {
-            name: PaletteColor(name, shades)
-            for name, shades in PALETTE.items()
+            name: PaletteColor(name, shades) for name, shades in PALETTE.items()
         }
 
     def __getattr__(self, name: str) -> PaletteColor:
         try:
             return self._colors[name]
         except KeyError as error:
-            raise AttributeError(
-                f"Unknown palette color {name!r}"
-            ) from error
+            raise AttributeError(f"Unknown palette color {name!r}") from error
 
     def __str__(self) -> str:
         raise EngineError(
