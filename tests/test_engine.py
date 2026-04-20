@@ -132,6 +132,23 @@ def make_single_syllable_event() -> Event:
     )
 
 
+def make_leading_blank_syllable_event() -> Event:
+    return Event(
+        text=r"{\k23}{\k22}ka",
+        effect="karaoke",
+        style="Default",
+        layer=0,
+        start_time=1000,
+        end_time=1450,
+        comment=False,
+        actor="Singer",
+        margin_l=0,
+        margin_r=0,
+        margin_t=0,
+        margin_b=0,
+    )
+
+
 def make_env() -> Environment:
     return Environment(
         styles={"Default": make_style()},
@@ -1124,6 +1141,50 @@ class TestEngineIntegration:
         )
 
         assert [result.text for result in results] == ["Xgo"]
+
+    def test_renders_leading_blank_syllable_without_no_blank(self) -> None:
+        engine = build_engine()
+        blank_event = make_leading_blank_syllable_event()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("S$syl_i:"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(),
+                )
+            ]
+        )
+
+        results = engine.apply(
+            [blank_event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == ["S0:", "S1:ka"]
+
+    def test_no_blank_skips_leading_blank_syllable(self) -> None:
+        engine = build_engine()
+        blank_event = make_leading_blank_syllable_event()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("S$syl_i:"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(no_blank=True),
+                )
+            ]
+        )
+
+        results = engine.apply(
+            [blank_event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == ["S1:ka"]
 
     def test_honors_line_no_blank_modifier(self) -> None:
         engine = build_engine()

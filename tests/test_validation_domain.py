@@ -25,7 +25,6 @@ from pykara.validation.rules.event_rules import (
 )
 from pykara.validation.rules.karaoke_rules import (
     PositiveSyllableDurationRule,
-    TimedSyllableTextRule,
 )
 from pykara.validation.rules.metadata_rules import (
     PositiveResolutionRule,
@@ -296,18 +295,6 @@ class TestKaraokeRules:
 
         assert violation is not None
         assert violation.code == "karaoke.duration_positive"
-        assert violation.severity is Severity.ERROR
-
-    def test_timed_syllable_text_rule_accepts_valid_syllable(self) -> None:
-        assert TimedSyllableTextRule().check(make_syllable()) is None
-
-    def test_timed_syllable_text_rule_reports_invalid_syllable(self) -> None:
-        violation = TimedSyllableTextRule().check(
-            replace(make_syllable(), text="   ", trimmed_text="")
-        )
-
-        assert violation is not None
-        assert violation.code == "karaoke.timed_text_required"
         assert violation.severity is Severity.ERROR
 
     def test_karaoke_validator_aggregates_rule_results(self) -> None:
