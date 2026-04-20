@@ -30,9 +30,7 @@ class AssColorFunction:
         green_component = _clamp_byte(green)
         blue_component = _clamp_byte(blue)
         return (
-            f"&H00{blue_component:02X}"
-            f"{green_component:02X}"
-            f"{red_component:02X}&"
+            f"&H00{blue_component:02X}{green_component:02X}{red_component:02X}&"
         )
 
 

@@ -391,6 +391,27 @@ _VAR_CONTEXT_VARIABLE_FIELD_NAMES = tuple(
     if not field_info.name.startswith("_")
 )
 
+_RESERVED_EXECUTION_NAMES = frozenset(
+    {
+        *_VAR_CONTEXT_VARIABLE_FIELD_NAMES,
+        *EXPOSED_MODULES,
+        "actor",
+        "char",
+        "get",
+        "layer",
+        "line",
+        "loop_i",
+        "loop_n",
+        "metadata",
+        "palette",
+        "retime",
+        "set",
+        "style",
+        "syl",
+        "word",
+    }
+)
+
 
 class _MathNamespace:
     """Immutable math helper namespace exposed to execution."""
@@ -1090,6 +1111,11 @@ class Environment:
         )
         namespace.update(self._expression_objects())
         return namespace
+
+    def reserved_names(self) -> frozenset[str]:
+        """Return names that user code must not bind."""
+
+        return _RESERVED_EXECUTION_NAMES
 
     def _function_namespace(self) -> dict[str, object]:
         cache_key = f"{self.declaration}:{self.active_code_scope or ''}"

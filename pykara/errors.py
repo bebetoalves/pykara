@@ -167,6 +167,15 @@ class TemplateRuntimeError(EngineError):
         super().__init__(f"Runtime error in template: {cause}")
 
 
+class ReservedNameError(EngineError):
+    """Raised when code tries to bind a name reserved by Pykara."""
+
+    def __init__(self, name: str, source: str) -> None:
+        self.name = name
+        self.source = source
+        super().__init__(f"Cannot assign to reserved name {name!r}")
+
+
 class UnknownVariableError(EngineError):
     """Raised when a $variable reference in TemplateBody does not exist."""
 

@@ -102,9 +102,7 @@ class AllowedVariableScopeRule:
         return Violation(
             severity=self.severity,
             code=self.code,
-            message=(
-                "Variable is not available in this declaration scope."
-            ),
+            message=("Variable is not available in this declaration scope."),
             context=(
                 f"variable=${subject.variable_name}, "
                 f"group={variable_specification.group}, "

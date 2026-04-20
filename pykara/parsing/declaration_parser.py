@@ -47,6 +47,7 @@ class TemplateDeclaration:
     modifiers: TemplateModifiers
     style: str = ""
     actor: str = ""
+    layer: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -192,6 +193,7 @@ class DeclarationParser:
                 body=TemplateBody(event.text),
                 scope=scope,
                 modifiers=modifiers,
+                layer=event.layer,
                 style=declaration_style,
                 actor=event.actor,
             )

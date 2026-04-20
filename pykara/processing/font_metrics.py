@@ -522,10 +522,10 @@ def _register_font_dirs_win32(font_dirs: tuple[Path, ...]) -> None:
             continue
 
         for path in directory.rglob("*"):
-            if (
-                not path.is_file()
-                or path.suffix.casefold() not in {".ttf", ".otf"}
-            ):
+            if not path.is_file() or path.suffix.casefold() not in {
+                ".ttf",
+                ".otf",
+            }:
                 continue
 
             resolved = str(path.resolve())
