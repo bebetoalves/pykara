@@ -1060,6 +1060,65 @@ class TestEngineIntegration:
             "C1-965:o",
         ]
 
+    def test_independent_line_loops_do_not_duplicate_syl_templates(
+        self,
+    ) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("L$loop_glow_i"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(
+                        no_text=True,
+                        loops=(
+                            LoopDescriptor(
+                                name="glow",
+                                iterations=2,
+                                explicit_name="glow",
+                            ),
+                        ),
+                    ),
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("R$loop_rib_i"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(
+                        no_text=True,
+                        loops=(
+                            LoopDescriptor(
+                                name="rib",
+                                iterations=2,
+                                explicit_name="rib",
+                            ),
+                        ),
+                    ),
+                ),
+            ],
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("S:"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(no_text=False),
+                )
+            ],
+        )
+
+        results = engine.apply(
+            [make_single_syllable_event()],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == [
+            "L0",
+            "L1",
+            "R0",
+            "R1",
+            "S:go",
+        ]
+
     def test_syl_loop_is_visible_to_char(self) -> None:
         engine = build_engine()
         declarations = ParsedDeclarations(

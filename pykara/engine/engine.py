@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 import random
 import re
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import replace
 from types import CodeType
@@ -13,6 +13,7 @@ from types import CodeType
 from pykara.data import Event, Metadata, Style
 from pykara.data.events.karaoke import Karaoke, Syllable, Word
 from pykara.declaration import Scope
+from pykara.declaration.template import LoopDescriptor
 from pykara.engine.variable_context import (
     Environment,
     GeneratedLine,
@@ -38,6 +39,7 @@ from pykara.processing.line_preprocessor import (
 from pykara.processing.text_renderer import TextRenderer
 
 _PLAIN_WORD_PATTERN = re.compile(r"[ \t]*[^ \t]+")
+_TEMPLATE_VARIABLE_PATTERN = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*)")
 
 
 class _AssignedNameCollector(ast.NodeVisitor):
@@ -297,7 +299,13 @@ class Engine:
                 continue
 
             descendants: Callable[[], list[Event]] | None = None
-            if declaration.modifiers.loops:
+            if (
+                declaration.modifiers.loops
+                and self._line_descendants_reference_loops(
+                    declaration,
+                    declarations,
+                )
+            ):
                 had_looping_line_template = True
 
                 def render_line_descendants() -> list[Event]:
@@ -496,7 +504,13 @@ class Engine:
                         continue
 
                     descendants: Callable[[], list[Event]] | None = None
-                    if declaration.modifiers.loops:
+                    if (
+                        declaration.modifiers.loops
+                        and self._word_descendants_reference_loops(
+                            declaration,
+                            declarations,
+                        )
+                    ):
                         had_looping_word_template = True
                         descendants = self._make_syllable_descendants(
                             event=event,
@@ -585,7 +599,13 @@ class Engine:
                         continue
 
                     descendants: Callable[[], list[Event]] | None = None
-                    if declaration.modifiers.loops:
+                    if (
+                        declaration.modifiers.loops
+                        and self._syl_descendants_reference_loops(
+                            declaration,
+                            declarations,
+                        )
+                    ):
                         had_looping_syl_template = True
                         descendants = self._make_char_descendants(
                             event=event,
@@ -922,6 +942,104 @@ class Engine:
         if not declaration.modifiers.no_text:
             output.text += suffix_text
         return output.to_event()
+
+    def _line_descendants_reference_loops(
+        self,
+        declaration: TemplateDeclaration,
+        declarations: ParsedDeclarations,
+    ) -> bool:
+        descendants = [
+            *declarations.word,
+            *declarations.syl,
+            *declarations.char,
+            *declarations.patch_word,
+            *declarations.patch_syl,
+            *declarations.patch_char,
+        ]
+        return self._declarations_reference_loops(
+            descendants,
+            declaration.modifiers.loops,
+        )
+
+    def _word_descendants_reference_loops(
+        self,
+        declaration: TemplateDeclaration,
+        declarations: ParsedDeclarations,
+    ) -> bool:
+        descendants = [
+            *declarations.syl,
+            *declarations.char,
+            *declarations.patch_syl,
+            *declarations.patch_char,
+        ]
+        return self._declarations_reference_loops(
+            descendants,
+            declaration.modifiers.loops,
+        )
+
+    def _syl_descendants_reference_loops(
+        self,
+        declaration: TemplateDeclaration,
+        declarations: ParsedDeclarations,
+    ) -> bool:
+        descendants = [
+            *declarations.char,
+            *declarations.patch_char,
+        ]
+        return self._declarations_reference_loops(
+            descendants,
+            declaration.modifiers.loops,
+        )
+
+    def _declarations_reference_loops(
+        self,
+        declarations: Sequence[
+            TemplateDeclaration | CodeDeclaration | PatchDeclaration
+        ],
+        loops: tuple[LoopDescriptor, ...],
+    ) -> bool:
+        loop_variable_names = self._loop_variable_names(loops)
+        return any(
+            isinstance(declaration, (TemplateDeclaration, PatchDeclaration))
+            and bool(
+                self._template_variable_names(declaration)
+                & loop_variable_names
+            )
+            for declaration in declarations
+        )
+
+    def _loop_variable_names(
+        self,
+        loops: tuple[LoopDescriptor, ...],
+    ) -> frozenset[str]:
+        variable_names: set[str] = set()
+        for loop in loops:
+            variable_names.add(f"loop_{loop.name}_i")
+            variable_names.add(f"loop_{loop.name}_n")
+        if len(loops) == 1:
+            variable_names.update({"loop_i", "loop_n"})
+        return frozenset(variable_names)
+
+    def _template_variable_names(
+        self,
+        declaration: TemplateDeclaration | PatchDeclaration,
+    ) -> frozenset[str]:
+        variable_names = set(
+            _TEMPLATE_VARIABLE_PATTERN.findall(declaration.body.text)
+        )
+        if declaration.modifiers.when is not None:
+            variable_names.update(
+                _TEMPLATE_VARIABLE_PATTERN.findall(
+                    declaration.modifiers.when,
+                )
+            )
+        if declaration.modifiers.unless is not None:
+            variable_names.update(
+                _TEMPLATE_VARIABLE_PATTERN.findall(
+                    declaration.modifiers.unless,
+                )
+            )
+        return frozenset(variable_names)
 
     def _render_patch_text(
         self,
