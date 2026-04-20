@@ -185,6 +185,33 @@ local function combine_outputs(primary, secondary)
     return primary .. "\n" .. secondary
 end
 
+local function is_powershell_progress_clixml(output)
+    local text = output or ""
+    local trimmed = text:gsub("^%s+", ""):gsub("%s+$", "")
+
+    if not trimmed:match("^#< CLIXML") then
+        return false
+    end
+
+    local saw_stream_object = false
+    for stream in trimmed:gmatch('<Obj S="([^"]+)"') do
+        saw_stream_object = true
+        if stream ~= "progress" then
+            return false
+        end
+    end
+
+    return saw_stream_object
+        and trimmed:match("Preparing modules for first use%.") ~= nil
+end
+
+local function normalize_launcher_stderr(output)
+    if is_powershell_progress_clixml(output) then
+        return ""
+    end
+    return output or ""
+end
+
 local function interpret_command_status(ok, why, code)
     if type(ok) == "number" then
         return ok == 0, true
@@ -346,6 +373,7 @@ end
 
 local function build_windows_powershell_command(input_path, paths, hidden)
     local powershell_script = table.concat({
+        "$ProgressPreference = 'SilentlyContinue'\n",
         "$p = Start-Process -FilePath ",
         powershell_quote(pykara_program()),
         " -ArgumentList @(",
@@ -413,7 +441,9 @@ local function read_command_result(paths, succeeded, started)
         output = read_text_file(paths.output),
         stdout = read_text_file(paths.stdout),
         stderr = read_text_file(paths.stderr),
-        launcher_stderr = read_text_file(paths.launcher_stderr),
+        launcher_stderr = normalize_launcher_stderr(
+            read_text_file(paths.launcher_stderr)
+        ),
     }
 end
 
