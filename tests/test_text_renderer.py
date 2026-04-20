@@ -141,6 +141,40 @@ class TestTextRenderer:
 
         assert rendered == "1920x1080"
 
+    def test_exposes_palette_object_in_expressions(self) -> None:
+        renderer = TextRenderer()
+
+        rendered = renderer.render(
+            r"{\1c!palette.red[500]!\3c!palette.sky[200]!}",
+            make_env(),
+        )
+
+        assert rendered == r"{\1c&H004444EF&\3c&H00FDE6BA&}"
+
+    def test_palette_root_requires_color(self) -> None:
+        renderer = TextRenderer()
+
+        with pytest.raises(TemplateRuntimeError, match="choose a color"):
+            renderer.render("!palette!", make_env())
+
+    def test_palette_color_requires_shade(self) -> None:
+        renderer = TextRenderer()
+
+        with pytest.raises(TemplateRuntimeError, match="choose a shade"):
+            renderer.render("!palette.red!", make_env())
+
+    def test_palette_rejects_unknown_color(self) -> None:
+        renderer = TextRenderer()
+
+        with pytest.raises(TemplateRuntimeError, match="Unknown palette color"):
+            renderer.render("!palette.ocean[500]!", make_env())
+
+    def test_palette_rejects_unknown_shade(self) -> None:
+        renderer = TextRenderer()
+
+        with pytest.raises(TemplateRuntimeError, match="Unknown palette shade"):
+            renderer.render("!palette.red[75]!", make_env())
+
     def test_caches_compiled_expressions(
         self,
         monkeypatch: pytest.MonkeyPatch,

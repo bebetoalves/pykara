@@ -30,6 +30,9 @@ class ExpressionPropertySpecification:
 
 LINE_SCOPES = frozenset({Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR})
 WORD_SCOPES = frozenset({Scope.WORD, Scope.SYL, Scope.CHAR})
+ALL_SCOPES = frozenset(
+    {Scope.SETUP, Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR}
+)
 
 
 EXPRESSION_OBJECT_SPECIFICATIONS: dict[str, ExpressionObjectSpecification] = {
@@ -62,6 +65,11 @@ EXPRESSION_OBJECT_SPECIFICATIONS: dict[str, ExpressionObjectSpecification] = {
         name="metadata",
         available_scopes=LINE_SCOPES,
         description="Script-level metadata available to inline expressions.",
+    ),
+    "palette": ExpressionObjectSpecification(
+        name="palette",
+        available_scopes=ALL_SCOPES,
+        description="Tailwind color palette in ASS color format.",
     ),
 }
 

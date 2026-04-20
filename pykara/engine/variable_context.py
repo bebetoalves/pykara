@@ -15,6 +15,7 @@ from pykara.data.events.event import Event
 from pykara.data.events.karaoke.syllable import Syllable, Word
 from pykara.declaration import Scope
 from pykara.engine.functions import FUNCTION_REGISTRY
+from pykara.engine.palette import palette
 from pykara.errors import ExecutionAttributeUnavailableError
 from pykara.specification import EXPOSED_MODULES
 
@@ -1136,7 +1137,7 @@ class Environment:
         return variables
 
     def _expression_objects(self) -> dict[str, object]:
-        namespace: dict[str, object] = {}
+        namespace: dict[str, object] = {"palette": palette}
         if self.vars.line_start is not None:
             namespace["line"] = self._expression_object("line")
             namespace["style"] = self._expression_object("style")

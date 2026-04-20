@@ -78,7 +78,12 @@ class TextRenderer:
     ) -> str:
         compiled = self._compile_expression(expression)
         result = self._evaluate_compiled(expression, compiled, namespace)
-        return "" if result is None else str(result)
+        if result is None:
+            return ""
+        try:
+            return str(result)
+        except Exception as error:  # pragma: no cover - exercised in tests
+            raise TemplateRuntimeError(expression, error) from error
 
     def _compile_expression(self, expression: str) -> CodeType:
         try:
