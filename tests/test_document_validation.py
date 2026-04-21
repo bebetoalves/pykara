@@ -14,6 +14,7 @@ from pykara.parsing import (
     PatchDeclaration,
     TemplateDeclaration,
 )
+from pykara.validation.reports import ValidationReport
 from pykara.validation.validators import CrossValidator, DocumentValidator
 
 
@@ -283,6 +284,73 @@ class TestDocumentValidator:
                 )
             ]
         )
+
+        report = DocumentValidator().validate(document, ParsedDeclarations())
+
+        assert report.violations == ()
+
+    def test_accepts_zero_duration_karaoke_syllable_in_dialogue(self) -> None:
+        document = make_document(
+            events=[
+                make_event(
+                    text=r"{\k46}bomb{\k0}-{\k91}bomb {\k24}dan{\k65}cin'"
+                )
+            ]
+        )
+
+        report = DocumentValidator().validate(document, ParsedDeclarations())
+
+        assert report.violations == ()
+
+    def test_accepts_zero_duration_karaoke_syllable_in_comment(self) -> None:
+        document = make_document(
+            events=[
+                make_event(
+                    text=r"{\k46}bomb{\k0}-{\k91}bomb {\k24}dan{\k65}cin'",
+                    comment=True,
+                )
+            ]
+        )
+
+        report = DocumentValidator().validate(document, ParsedDeclarations())
+
+        assert report.violations == ()
+
+    def test_validates_commented_karaoke_same_as_dialogue(self) -> None:
+        class RecordingDocumentValidator(DocumentValidator):
+            def __init__(self) -> None:
+                super().__init__()
+                self.seen_comments: list[bool] = []
+
+            def _validate_event_karaoke(
+                self, event: Event
+            ) -> ValidationReport:
+                self.seen_comments.append(event.comment)
+                return super()._validate_event_karaoke(event)
+
+        validator = RecordingDocumentValidator()
+        validator.validate(
+            make_document(events=[make_event(text=r"{\k0}-", comment=False)]),
+            ParsedDeclarations(),
+        )
+        validator.validate(
+            make_document(events=[make_event(text=r"{\k0}-", comment=True)]),
+            ParsedDeclarations(),
+        )
+
+        assert validator.seen_comments == [False, True]
+
+    def test_ignores_k_tags_when_effect_is_not_karaoke(self) -> None:
+        document = make_document(
+            events=[make_event(text=r"{\k0}-", effect="", comment=False)]
+        )
+
+        report = DocumentValidator().validate(document, ParsedDeclarations())
+
+        assert report.violations == ()
+
+    def test_validates_ko_tags_for_karaoke_events(self) -> None:
+        document = make_document(events=[make_event(text=r"{\ko0}go")])
 
         report = DocumentValidator().validate(document, ParsedDeclarations())
 

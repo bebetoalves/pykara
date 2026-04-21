@@ -286,11 +286,21 @@ class TestKaraokeRules:
     ) -> None:
         assert PositiveSyllableDurationRule().check(make_syllable()) is None
 
+    def test_positive_syllable_duration_rule_accepts_zero_duration_syllable(
+        self,
+    ) -> None:
+        assert (
+            PositiveSyllableDurationRule().check(
+                replace(make_syllable(), duration=0, end_time=0, kdur=0.0)
+            )
+            is None
+        )
+
     def test_positive_syllable_duration_rule_reports_invalid_syllable(
         self,
     ) -> None:
         violation = PositiveSyllableDurationRule().check(
-            replace(make_syllable(), duration=0)
+            replace(make_syllable(), duration=-1)
         )
 
         assert violation is not None
@@ -301,7 +311,7 @@ class TestKaraokeRules:
         report = KaraokeValidator().validate(
             replace(
                 make_syllable(),
-                duration=0,
+                duration=-1,
                 text="   ",
                 trimmed_text="",
             )
