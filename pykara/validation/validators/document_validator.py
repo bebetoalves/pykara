@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import re
-
 from pykara.adapters import SubtitleDocument
 from pykara.data import Event
 from pykara.parsing import (
@@ -21,8 +19,6 @@ from pykara.validation.validators.metadata_validator import MetadataValidator
 from pykara.validation.validators.patch_validator import PatchValidator
 from pykara.validation.validators.style_validator import StyleValidator
 from pykara.validation.validators.template_validator import TemplateValidator
-
-_KARAOKE_TAG_PATTERN = re.compile(r"\\(?:k|K|kf)\d+")
 
 
 class DocumentValidator:
@@ -97,7 +93,7 @@ class DocumentValidator:
         )
 
     def _validate_event_karaoke(self, event: Event) -> ValidationReport:
-        if event.comment or _KARAOKE_TAG_PATTERN.search(event.text) is None:
+        if event.effect.lower() != "karaoke":
             return ValidationReport()
 
         karaoke = self._karaoke_parser.parse(event)
