@@ -654,6 +654,118 @@ class TestEngineIntegration:
 
         assert [result.text for result in results] == ["A,B"]
 
+    def test_setup_code_styles_modifier_restores_reference_style(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody('my_styles = ("A", "B")'),
+                    scope=Scope.SETUP,
+                ),
+                CodeDeclaration(
+                    body=CodeBody("seen = []"),
+                    scope=Scope.SETUP,
+                ),
+                CodeDeclaration(
+                    body=CodeBody("seen.append(style.name)"),
+                    scope=Scope.SETUP,
+                    modifiers=CodeModifiers(styles="my_styles"),
+                ),
+                CodeDeclaration(
+                    body=CodeBody("leaked = style.name"),
+                    scope=Scope.SETUP,
+                ),
+            ],
+        )
+
+        with pytest.raises(TemplateRuntimeError):
+            engine.apply(
+                [make_event("A")],
+                declarations,
+                Metadata(res_x=1920, res_y=1080),
+                {
+                    "A": make_style("A"),
+                    "B": make_style("B"),
+                },
+            )
+
+    def test_code_line_can_define_styles_tuple_before_template_uses_it(
+        self,
+    ) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            line=[
+                CodeDeclaration(
+                    body=CodeBody('karaokeable = ("Romaji", "Kanji")'),
+                    scope=Scope.LINE,
+                    style="Romaji",
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("!style.name!:!line.text!"),
+                    scope=Scope.LINE,
+                    style="Romaji",
+                    modifiers=TemplateModifiers(
+                        styles="karaokeable",
+                        no_text=True,
+                    ),
+                ),
+            ],
+        )
+
+        results = engine.apply(
+            [
+                make_event("Romaji", text=r"{\k50}ro"),
+                make_event("Kanji", text=r"{\k50}漢"),
+            ],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {
+                "Romaji": make_style("Romaji"),
+                "Kanji": make_style("Kanji"),
+            },
+        )
+
+        assert [(result.style, result.text) for result in results] == [
+            ("Romaji", "Romaji:ro"),
+            ("Kanji", "Kanji:漢"),
+        ]
+
+    def test_code_line_all_can_define_styles_tuple_for_first_matching_event(
+        self,
+    ) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            line=[
+                CodeDeclaration(
+                    body=CodeBody('karaokeable = ("Romaji", "Kanji")'),
+                    scope=Scope.LINE,
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("!style.name!:!line.text!"),
+                    scope=Scope.LINE,
+                    style="Romaji",
+                    modifiers=TemplateModifiers(
+                        styles="karaokeable",
+                        no_text=True,
+                    ),
+                ),
+            ],
+        )
+
+        results = engine.apply(
+            [make_event("Kanji", text=r"{\k50}漢")],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {
+                "Romaji": make_style("Romaji"),
+                "Kanji": make_style("Kanji"),
+            },
+        )
+
+        assert [(result.style, result.text) for result in results] == [
+            ("Kanji", "Kanji:漢"),
+        ]
+
     def test_styles_modifier_rejects_single_style_name(self) -> None:
         engine = build_engine()
         declarations = ParsedDeclarations(

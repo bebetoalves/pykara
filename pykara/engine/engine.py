@@ -372,12 +372,16 @@ class Engine:
             self._execute_code(declaration, env)
             return
 
-        for style_name in self._resolve_reference_style_names(
-            styles_token,
-            env,
-        ):
-            env.reference_style = env.styles[style_name]
-            self._execute_code(declaration, env)
+        saved_reference_style = env.reference_style
+        try:
+            for style_name in self._resolve_reference_style_names(
+                styles_token,
+                env,
+            ):
+                env.reference_style = env.styles[style_name]
+                self._execute_code(declaration, env)
+        finally:
+            env.reference_style = saved_reference_style
 
     def _execute_code(
         self,
@@ -1326,6 +1330,7 @@ class Engine:
                 declaration,
                 event,
                 env,
+                allow_unresolved=True,
             ):
                 if style_name not in names:
                     names.append(style_name)
@@ -1336,9 +1341,12 @@ class Engine:
         declaration: TemplateDeclaration | CodeDeclaration,
         event: Event,
         env: Environment,
+        allow_unresolved: bool = False,
     ) -> tuple[str, ...]:
         styles_token = self._declaration_reference_styles_token(declaration)
         if styles_token is None:
+            return (event.style,)
+        if allow_unresolved and styles_token not in env.user_namespace:
             return (event.style,)
         style_names = self._resolve_reference_style_names(styles_token, env)
         if event.style not in style_names:
