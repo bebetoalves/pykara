@@ -407,6 +407,14 @@ EXPRESSION_PROPERTY_SPECIFICATIONS: dict[
         source_variable=None,
         description="Current line style primary ASS color.",
     ),
+    ("style", "name"): ExpressionPropertySpecification(
+        object_name="style",
+        name="name",
+        type="str",
+        available_scopes=LINE_SCOPES,
+        source_variable=None,
+        description="Current line style name.",
+    ),
     ("style", "secondary_color"): ExpressionPropertySpecification(
         object_name="style",
         name="secondary_color",

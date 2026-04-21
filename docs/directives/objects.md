@@ -103,6 +103,7 @@ Inside `!expr!`, runtime data is exposed through objects.
 
 | Property | Description |
 |----------|-------------|
+| `name` | Style name. |
 | `primary_color` | Style primary color in ASS format. |
 | `secondary_color` | Style secondary color in ASS format. |
 | `outline_color` | Style outline color in ASS format. |

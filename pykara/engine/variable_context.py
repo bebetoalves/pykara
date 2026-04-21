@@ -514,6 +514,10 @@ class _ExpressionStyleObject:
         self._env = env
 
     @property
+    def name(self) -> str:
+        return self._style().name
+
+    @property
     def primary_color(self) -> str:
         return self._style().primary_colour
 

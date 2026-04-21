@@ -226,6 +226,7 @@ EXPECTED_CHAR_PROPERTIES = {
 }
 
 EXPECTED_LINE_STYLE_PROPERTIES = {
+    "name",
     "primary_color",
     "secondary_color",
     "outline_color",
