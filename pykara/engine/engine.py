@@ -146,10 +146,10 @@ class _CodeRunner:
         namespace["__builtins__"] = {}
         try:
             exec(compiled, namespace, namespace)  # noqa: S102
-            if "_seed" in assigned_names:
+            if "__seed__" in assigned_names:
                 seed_value = cast(
                     int | float | str | bytes | bytearray | None,
-                    namespace["_seed"],
+                    namespace["__seed__"],
                 )
                 env.rng.seed(seed_value)
         except BoundMethodInExpressionError:
@@ -198,10 +198,10 @@ class Engine:
     def __init__(
         self,
         preprocessor: LinePreprocessor,
-        rng_seed: int | None = None,
+        seed: int | None = None,
     ) -> None:
         self._preprocessor = preprocessor
-        self._rng_seed = rng_seed
+        self._initial_rng_value = seed
         self._karaoke_parser = KaraokeParser()
         self._renderer = TextRenderer()
         self._code_runner = _CodeRunner()
@@ -229,7 +229,7 @@ class Engine:
             styles=styles,
             declaration="code",
             metadata=meta,
-            rng=random.Random(self._rng_seed),  # noqa: S311
+            rng=random.Random(self._initial_rng_value),  # noqa: S311
         )
         for declaration in declarations.setup:
             self._execute_setup_code(declaration, env)

@@ -217,7 +217,7 @@ class TestCodeRunnerCaching:
     def test_caches_expanded_char_syllables_per_environment(self) -> None:
         extents = CountingExtentsProvider({"g": 10.0, "o": 10.0})
         preprocessor = LinePreprocessor(extents)
-        engine = Engine(preprocessor, rng_seed=1)
+        engine = Engine(preprocessor, seed=1)
         env = Environment(
             styles={"Default": make_style()},
             declaration="template",
@@ -250,7 +250,7 @@ def build_engine() -> Engine:
             "l": 10.0,
         }
     )
-    return Engine(LinePreprocessor(extents), rng_seed=1)
+    return Engine(LinePreprocessor(extents), seed=1)
 
 
 class TestCodeRunner:
@@ -271,19 +271,40 @@ class TestCodeRunner:
 
         assert env.user_namespace["value"] == 2
 
-    def test_reseeds_random_when_seed_is_assigned(self) -> None:
+    def test_reseeds_random_when_dunderseed_is_assigned(self) -> None:
         runner = _CodeRunner()
         env = make_env()
 
-        runner.run("_seed = 7", env)
+        runner.run("__seed__ = 7", env)
 
         assert env.rng.randint(1, 100) == 42
 
-    def test_does_not_reapply_seed_when_other_code_runs(self) -> None:
+    def test_plain_name_does_not_reseed_random(self) -> None:
         runner = _CodeRunner()
         env = make_env()
 
-        runner.run("_seed = 7", env)
+        runner.run("seed = 7", env)
+
+        assert env.user_namespace["seed"] == 7
+        assert env.rng.randint(1, 100) == 18
+
+    def test_legacy_single_underscore_name_does_not_reseed_random(
+        self,
+    ) -> None:
+        runner = _CodeRunner()
+        env = make_env()
+        legacy_name = "_" + "seed"
+
+        runner.run(f"{legacy_name} = 7", env)
+
+        assert env.user_namespace[legacy_name] == 7
+        assert env.rng.randint(1, 100) == 18
+
+    def test_does_not_reapply_dunderseed_when_other_code_runs(self) -> None:
+        runner = _CodeRunner()
+        env = make_env()
+
+        runner.run("__seed__ = 7", env)
         assert env.rng.randint(1, 100) == 42
         runner.run("value = 1", env)
 
@@ -334,15 +355,17 @@ class TestEngineIntegration:
 
         assert [result.text for result in results] == ["0:goal"]
 
-    def test_cli_seed_runs_before_code_seed(self) -> None:
+    def test_cli_option_runs_before_code_dunderseed(self) -> None:
         engine = Engine(
             LinePreprocessor(FakeExtentsProvider({"goal": 40.0})),
-            rng_seed=42,
+            seed=42,
         )
         declarations = ParsedDeclarations(
             setup=[
                 CodeDeclaration(
-                    body=CodeBody("first = random.randint(1, 100); _seed = 7"),
+                    body=CodeBody(
+                        "first = random.randint(1, 100); __seed__ = 7"
+                    ),
                     scope=Scope.SETUP,
                 )
             ],
@@ -369,7 +392,7 @@ class TestEngineIntegration:
         declarations = ParsedDeclarations(
             line=[
                 CodeDeclaration(
-                    body=CodeBody("_seed = line.i + 5"),
+                    body=CodeBody("__seed__ = line.i + 5"),
                     scope=Scope.LINE,
                 ),
                 TemplateDeclaration(
@@ -401,7 +424,7 @@ class TestEngineIntegration:
                     }
                 )
             ),
-            rng_seed=1,
+            seed=1,
         )
         event = make_event("Alt")
         declarations = ParsedDeclarations(
@@ -447,7 +470,7 @@ class TestEngineIntegration:
                     }
                 )
             ),
-            rng_seed=1,
+            seed=1,
         )
         event = make_event("A")
         declarations = ParsedDeclarations(
@@ -497,7 +520,7 @@ class TestEngineIntegration:
                     }
                 )
             ),
-            rng_seed=1,
+            seed=1,
         )
         declarations = ParsedDeclarations(
             setup=[
@@ -560,7 +583,7 @@ class TestEngineIntegration:
                     }
                 )
             ),
-            rng_seed=1,
+            seed=1,
         )
         declarations = ParsedDeclarations(
             setup=[
@@ -611,7 +634,7 @@ class TestEngineIntegration:
                     }
                 )
             ),
-            rng_seed=1,
+            seed=1,
         )
         declarations = ParsedDeclarations(
             setup=[
@@ -670,7 +693,7 @@ class TestEngineIntegration:
                     }
                 )
             ),
-            rng_seed=1,
+            seed=1,
         )
         event = make_event("A")
         declarations = ParsedDeclarations(

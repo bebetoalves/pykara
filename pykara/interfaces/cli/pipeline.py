@@ -81,7 +81,7 @@ def run_validation(
 def run_engine(
     document: SubtitleDocument,
     declarations: ParsedDeclarations,
-    rng_seed: int | None = None,
+    seed: int | None = None,
     font_dirs: tuple[Path, ...] = (),
 ) -> list[Event]:
     """Generate fx events through the core engine.
@@ -89,7 +89,7 @@ def run_engine(
     Args:
         document: Loaded subtitle document.
         declarations: Parsed declarations for that document.
-        rng_seed: Optional deterministic random seed.
+        seed: Optional deterministic random seed.
         font_dirs: Optional directories containing fonts.
 
     Returns:
@@ -99,7 +99,7 @@ def run_engine(
     preprocessor = LinePreprocessor(
         extents=FontMetricsProvider(font_dirs=font_dirs),
     )
-    return Engine(preprocessor, rng_seed=rng_seed).apply(
+    return Engine(preprocessor, seed=seed).apply(
         document.events,
         declarations,
         document.metadata,

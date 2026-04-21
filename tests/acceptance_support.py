@@ -74,7 +74,7 @@ def regenerate_fx_events(path: Path) -> tuple[SubtitleDocument, list[Event]]:
         code_mod_registry=CODE_MODIFIER_REGISTRY,
     ).parse(executable_document.events)
     preprocessor = LinePreprocessor(extents=FontMetricsProvider())
-    fx_events = Engine(preprocessor, rng_seed=1).apply(
+    fx_events = Engine(preprocessor, seed=1).apply(
         executable_document.events,
         declarations,
         executable_document.metadata,

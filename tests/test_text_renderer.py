@@ -132,7 +132,7 @@ class TestTextRenderer:
 
         assert rendered == "go-go-go"
 
-    def test_exposes_seeded_random_object_in_expressions(self) -> None:
+    def test_exposes_deterministic_random_object_in_expressions(self) -> None:
         renderer = TextRenderer()
 
         rendered = renderer.render(
