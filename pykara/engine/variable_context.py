@@ -14,6 +14,7 @@ from pykara.data import Karaoke, Metadata, Style
 from pykara.data.events.event import Event
 from pykara.data.events.karaoke.syllable import Syllable, Word
 from pykara.declaration import Scope
+from pykara.declaration.template.modifiers import TemplateModifiers
 from pykara.engine.functions import FUNCTION_REGISTRY
 from pykara.engine.palette import palette
 from pykara.errors import ExecutionAttributeUnavailableError
@@ -737,11 +738,15 @@ class _ExpressionLineObject:
 
     @property
     def syls(self) -> tuple[_ExpressionKaraokeSyllableObject, ...]:
-        if self._env.karaoke is None:
+        if self._env.active_line_syls is not None:
+            syllables = self._env.active_line_syls
+        elif self._env.karaoke is not None:
+            syllables = self._env.karaoke.syllables
+        else:
             _raise_unavailable_attribute("syls")
         return tuple(
             _ExpressionKaraokeSyllableObject(syllable)
-            for syllable in self._env.karaoke.syllables
+            for syllable in syllables
         )
 
     def _required_int(self, name: str, value: int | None) -> int:
@@ -1061,6 +1066,8 @@ class Environment:
     line_char_count: int | None = None
     active_code_scope: Scope | None = None
     active_template_scope: Scope | None = None
+    active_template_modifiers: TemplateModifiers | None = None
+    active_line_syls: tuple[Syllable, ...] | None = None
     retime_used: bool = False
     retime_line_words: tuple[Word, ...] = ()
     retime_line_syls: tuple[Syllable, ...] = ()
@@ -1094,10 +1101,16 @@ class Environment:
         variables.update(self._loop_variables())
         return variables
 
-    def begin_template_evaluation(self, scope: Scope) -> None:
+    def begin_template_evaluation(
+        self,
+        scope: Scope,
+        modifiers: TemplateModifiers,
+    ) -> None:
         """Start one template body evaluation."""
 
         self.active_template_scope = scope
+        self.active_template_modifiers = modifiers
+        self.active_line_syls = None
         self.retime_used = False
 
     def as_dict(self) -> dict[str, object]:

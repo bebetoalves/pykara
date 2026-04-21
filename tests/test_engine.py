@@ -1243,7 +1243,56 @@ class TestEngineIntegration:
             {"Default": make_style()},
         )
 
-        assert [result.text for result in results] == ["S1:ka"]
+        assert [result.text for result in results] == ["S0:ka"]
+
+    def test_no_blank_reindexes_syllables_and_line_syls(self) -> None:
+        engine = build_engine()
+        blank_event = make_leading_blank_syllable_event()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("$syl_i/$syl_n:$syl_center:!line.syls[$syl_i].center!"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(no_blank=True),
+                )
+            ]
+        )
+
+        results = engine.apply(
+            [blank_event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == ["0/1:960:960.0ka"]
+
+    def test_no_blank_reindexes_conditions_for_first_visible_syllable(
+        self,
+    ) -> None:
+        engine = build_engine()
+        blank_event = make_leading_blank_syllable_event()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("F"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(
+                        no_blank=True,
+                        when="syl.i == 0",
+                    ),
+                )
+            ]
+        )
+
+        results = engine.apply(
+            [blank_event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == ["Fka"]
 
     def test_honors_line_no_blank_modifier(self) -> None:
         engine = build_engine()
