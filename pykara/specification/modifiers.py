@@ -68,7 +68,7 @@ MODIFIER_SPECIFICATIONS: dict[str, ModifierSpecification] = {
         takes_argument=True,
         applicable_to=frozenset({"template", "code"}),
         allowed_scopes=STYLE_SCOPES,
-        description="Use a tuple of styles as runtime reference styles.",
+        description="Filter karaoke events by a tuple of style names.",
     ),
     "when": ModifierSpecification(
         keyword="when",

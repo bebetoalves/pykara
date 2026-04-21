@@ -112,11 +112,14 @@ def make_style(name: str = "Default") -> Style:
     )
 
 
-def make_event() -> Event:
+def make_event(
+    style: str = "Default",
+    text: str = r"{\k20}go{\k30}al",
+) -> Event:
     return Event(
-        text=r"{\k20}go{\k30}al",
+        text=text,
         effect="karaoke",
-        style="Default",
+        style=style,
         layer=0,
         start_time=1000,
         end_time=1500,
@@ -302,7 +305,7 @@ class TestEngineIntegration:
             ),
             rng_seed=1,
         )
-        event = make_event()
+        event = make_event("Alt")
         declarations = ParsedDeclarations(
             setup=[
                 CodeDeclaration(
@@ -348,7 +351,7 @@ class TestEngineIntegration:
             ),
             rng_seed=1,
         )
-        event = make_event()
+        event = make_event("A")
         declarations = ParsedDeclarations(
             setup=[
                 CodeDeclaration(
@@ -381,7 +384,182 @@ class TestEngineIntegration:
 
         assert [(result.style, result.text) for result in results] == [
             ("A", "A:20"),
+        ]
+
+    def test_styles_modifier_applies_only_to_events_with_listed_styles(
+        self,
+    ) -> None:
+        engine = Engine(
+            LinePreprocessor(
+                StyleAwareExtentsProvider(
+                    {
+                        ("A", "goal"): 20.0,
+                        ("B", "goal"): 60.0,
+                        ("Default", "goal"): 100.0,
+                    }
+                )
+            ),
+            rng_seed=1,
+        )
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody('my_styles = ("A", "B")'),
+                    scope=Scope.SETUP,
+                )
+            ],
+            line=[
+                CodeDeclaration(
+                    body=CodeBody(
+                        "if style.name not in my_styles:\n"
+                        '    raise RuntimeError("unlisted style")'
+                    ),
+                    scope=Scope.LINE,
+                    modifiers=CodeModifiers(styles="my_styles"),
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("!style.name!:$line_width"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(
+                        styles="my_styles",
+                        no_text=True,
+                    ),
+                ),
+            ],
+        )
+
+        results = engine.apply(
+            [
+                make_event("Default"),
+                make_event("A"),
+                make_event("B"),
+                make_event("C"),
+            ],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {
+                "Default": make_style(),
+                "A": make_style("A"),
+                "B": make_style("B"),
+                "C": make_style("C"),
+            },
+        )
+
+        assert [(result.style, result.text) for result in results] == [
+            ("A", "A:20"),
             ("B", "B:60"),
+        ]
+
+    def test_one_styles_template_uses_each_matching_line_values(
+        self,
+    ) -> None:
+        engine = Engine(
+            LinePreprocessor(
+                StyleAwareExtentsProvider(
+                    {
+                        ("A", "red"): 30.0,
+                        ("B", "blue"): 90.0,
+                    }
+                )
+            ),
+            rng_seed=1,
+        )
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody('my_styles = ("A", "B")'),
+                    scope=Scope.SETUP,
+                )
+            ],
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("!style.name!:!line.text!:$line_width"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(
+                        styles="my_styles",
+                        no_text=True,
+                    ),
+                )
+            ],
+        )
+
+        results = engine.apply(
+            [
+                make_event("A", text=r"{\k50}red"),
+                make_event("B", text=r"{\k50}blue"),
+            ],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {
+                "A": make_style("A"),
+                "B": make_style("B"),
+            },
+        )
+
+        assert [(result.style, result.text) for result in results] == [
+            ("A", "A:red:30"),
+            ("B", "B:blue:90"),
+        ]
+
+    def test_styles_modifier_overrides_template_line_style_filter(
+        self,
+    ) -> None:
+        engine = Engine(
+            LinePreprocessor(
+                StyleAwareExtentsProvider(
+                    {
+                        ("Romaji", "ro"): 30.0,
+                        ("Kanji", "漢"): 50.0,
+                    }
+                )
+            ),
+            rng_seed=1,
+        )
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody('karaokeable = ("Romaji", "Kanji")'),
+                    scope=Scope.SETUP,
+                )
+            ],
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("!style.name!:!syl.text!:$syl_width"),
+                    scope=Scope.SYL,
+                    style="Romaji",
+                    actor="start",
+                    modifiers=TemplateModifiers(
+                        styles="karaokeable",
+                        no_text=True,
+                    ),
+                )
+            ],
+            patch_syl=[
+                PatchDeclaration(
+                    body=PatchBody("{patched}"),
+                    scope=Scope.SYL,
+                    style="Romaji",
+                    modifiers=PatchModifiers(for_actor="start"),
+                )
+            ],
+        )
+
+        results = engine.apply(
+            [
+                make_event("Romaji", text=r"{\k50}ro"),
+                make_event("Kanji", text=r"{\k50}漢"),
+            ],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {
+                "Romaji": make_style("Romaji"),
+                "Kanji": make_style("Kanji"),
+            },
+        )
+
+        assert [(result.style, result.text) for result in results] == [
+            ("Romaji", "Romaji:ro:30{patched}"),
+            ("Kanji", "Kanji:漢:50{patched}"),
         ]
 
     def test_code_styles_modifier_uses_reference_style_context(self) -> None:
@@ -396,7 +574,7 @@ class TestEngineIntegration:
             ),
             rng_seed=1,
         )
-        event = make_event()
+        event = make_event("A")
         declarations = ParsedDeclarations(
             setup=[
                 CodeDeclaration(
@@ -432,7 +610,7 @@ class TestEngineIntegration:
             },
         )
 
-        assert [result.text for result in results] == ["A:20", "B:60"]
+        assert [result.text for result in results] == ["A:20"]
 
     def test_setup_code_styles_modifier_runs_for_each_reference_style(
         self,

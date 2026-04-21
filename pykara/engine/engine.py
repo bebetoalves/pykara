@@ -1166,7 +1166,11 @@ class Engine:
     ) -> bool:
         if patch.scope is not template.scope:
             return False
-        if not self._declaration_applies_to_style(patch, source_event):
+        if not self._patch_applies_to_style(
+            patch=patch,
+            template=template,
+            source_event=source_event,
+        ):
             return False
         if (
             patch.modifiers.for_actor is not None
@@ -1182,6 +1186,19 @@ class Engine:
         if not self._passes_patch_conditions(patch, env):
             return False
         return True
+
+    def _patch_applies_to_style(
+        self,
+        *,
+        patch: PatchDeclaration,
+        template: TemplateDeclaration,
+        source_event: Event,
+    ) -> bool:
+        if self._declaration_reference_styles_token(template) is None:
+            return self._declaration_applies_to_style(patch, source_event)
+        if template.style:
+            return not patch.style or patch.style == template.style
+        return not patch.style or patch.style == source_event.style
 
     def _passes_conditions(
         self,
@@ -1243,6 +1260,12 @@ class Engine:
         declaration: TemplateDeclaration | CodeDeclaration | PatchDeclaration,
         event: Event,
     ) -> bool:
+        if (
+            not isinstance(declaration, PatchDeclaration)
+            and self._declaration_reference_styles_token(declaration)
+            is not None
+        ):
+            return True
         return not declaration.style or declaration.style == event.style
 
     def _declaration_applies_to_current_reference_style(
@@ -1274,13 +1297,12 @@ class Engine:
         reference_style_name: str,
         env: Environment,
     ) -> bool:
-        styles_token = self._declaration_reference_styles_token(declaration)
-        if styles_token is None:
-            return reference_style_name == event.style
-        return reference_style_name in self._resolve_reference_style_names(
-            styles_token,
+        reference_style_names = self._reference_style_names_for_declaration(
+            declaration,
+            event,
             env,
         )
+        return reference_style_name in reference_style_names
 
     def _declaration_reference_styles_token(
         self,
@@ -1300,18 +1322,28 @@ class Engine:
         for declaration in self._scoped_declarations(declarations):
             if not self._declaration_applies_to_style(declaration, event):
                 continue
-            styles_token = self._declaration_reference_styles_token(declaration)
-            if styles_token is None:
-                style_names = (event.style,)
-            else:
-                style_names = self._resolve_reference_style_names(
-                    styles_token,
-                    env,
-                )
-            for style_name in style_names:
+            for style_name in self._reference_style_names_for_declaration(
+                declaration,
+                event,
+                env,
+            ):
                 if style_name not in names:
                     names.append(style_name)
         return tuple(names)
+
+    def _reference_style_names_for_declaration(
+        self,
+        declaration: TemplateDeclaration | CodeDeclaration,
+        event: Event,
+        env: Environment,
+    ) -> tuple[str, ...]:
+        styles_token = self._declaration_reference_styles_token(declaration)
+        if styles_token is None:
+            return (event.style,)
+        style_names = self._resolve_reference_style_names(styles_token, env)
+        if event.style not in style_names:
+            return ()
+        return (event.style,)
 
     def _scoped_declarations(
         self,
