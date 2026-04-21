@@ -919,22 +919,26 @@ class Engine:
         output.layer = declaration.layer
         env.line = output
         env.declaration = "template"
-        env.begin_template_evaluation(declaration.scope)
-        template_text = self._renderer.render(declaration.body.text, env)
-        prepend_text = self._render_patch_text(
-            template=declaration,
-            source_event=source_event,
-            patches=patches,
-            env=env,
-            prepend=True,
+        env.begin_template_evaluation(
+            declaration.scope,
+            declaration.modifiers,
         )
-        injected_text = self._render_patch_text(
-            template=declaration,
-            source_event=source_event,
-            patches=patches,
-            env=env,
-            prepend=False,
-        )
+        with self._apply_template_modifier_context(declaration, env):
+            template_text = self._renderer.render(declaration.body.text, env)
+            prepend_text = self._render_patch_text(
+                template=declaration,
+                source_event=source_event,
+                patches=patches,
+                env=env,
+                prepend=True,
+            )
+            injected_text = self._render_patch_text(
+                template=declaration,
+                source_event=source_event,
+                patches=patches,
+                env=env,
+                prepend=False,
+            )
         if declaration.scope is Scope.LINE:
             output.text = prepend_text + injected_text + template_text
         else:
@@ -942,6 +946,38 @@ class Engine:
         if not declaration.modifiers.no_text:
             output.text += suffix_text
         return output.to_event()
+
+    @contextmanager
+    def _apply_template_modifier_context(
+        self,
+        declaration: TemplateDeclaration,
+        env: Environment,
+    ) -> Iterator[None]:
+        saved_syl_i = env.vars.syl_i
+        saved_syl_n = env.vars.syl_n
+        saved_line_syls = env.active_line_syls
+        try:
+            if (
+                declaration.scope is Scope.SYL
+                and declaration.modifiers.no_blank
+                and env.karaoke is not None
+                and env.syl is not None
+            ):
+                visible_syllables = tuple(
+                    syllable
+                    for syllable in env.karaoke.syllables
+                    if not self._is_blank_syllable(syllable)
+                )
+                if env.syl in visible_syllables:
+                    env.active_line_syls = visible_syllables
+                    visible_index = visible_syllables.index(env.syl)
+                    env.vars.syl_i = visible_index
+                    env.vars.syl_n = len(visible_syllables)
+            yield
+        finally:
+            env.vars.syl_i = saved_syl_i
+            env.vars.syl_n = saved_syl_n
+            env.active_line_syls = saved_line_syls
 
     def _line_descendants_reference_loops(
         self,
@@ -1096,20 +1132,21 @@ class Engine:
         declaration: TemplateDeclaration,
         env: Environment,
     ) -> bool:
-        if declaration.modifiers.when is not None and not bool(
-            self._renderer.evaluate_expression(
-                declaration.modifiers.when,
-                env,
-            )
-        ):
-            return False
-        if declaration.modifiers.unless is not None and bool(
-            self._renderer.evaluate_expression(
-                declaration.modifiers.unless,
-                env,
-            )
-        ):
-            return False
+        with self._apply_template_modifier_context(declaration, env):
+            if declaration.modifiers.when is not None and not bool(
+                self._renderer.evaluate_expression(
+                    declaration.modifiers.when,
+                    env,
+                )
+            ):
+                return False
+            if declaration.modifiers.unless is not None and bool(
+                self._renderer.evaluate_expression(
+                    declaration.modifiers.unless,
+                    env,
+                )
+            ):
+                return False
         return True
 
     def _passes_patch_conditions(
