@@ -14,6 +14,7 @@ from pykara.declaration.template import (
     LoopDescriptor,
     LoopModifier,
     NoBlankModifier,
+    NoMergeModifier,
     NoTextModifier,
     StylesModifier,
     TemplateBody,
@@ -133,6 +134,17 @@ class TestNoTextModifier:
         result, remaining = modifier.apply(["loop", "2"], current)
 
         assert result == replace(current, no_text=True)
+        assert remaining == ["loop", "2"]
+
+
+class TestNoMergeModifier:
+    def test_sets_flag_and_consumes_nothing(self) -> None:
+        modifier = NoMergeModifier()
+        current = TemplateModifiers()
+
+        result, remaining = modifier.apply(["loop", "2"], current)
+
+        assert result == replace(current, no_merge=True)
         assert remaining == ["loop", "2"]
 
 
@@ -256,6 +268,7 @@ class TestModifierRegistry:
         registry = ModifierRegistry(default=TemplateModifiers())
         registry.register(LoopModifier())
         registry.register(NoBlankModifier())
+        registry.register(NoMergeModifier())
         registry.register(NoTextModifier())
         registry.register(FxModifier())
         registry.register(StylesModifier())
@@ -286,6 +299,7 @@ class TestModifierRegistry:
                 "loop",
                 "3",
                 "no_blank",
+                "no_merge",
                 "no_text",
                 "fx",
                 "flash",
@@ -303,6 +317,7 @@ class TestModifierRegistry:
         assert result == TemplateModifiers(
             loops=(LoopDescriptor(name="i", iterations=3),),
             no_blank=True,
+            no_merge=True,
             no_text=True,
             fx="flash",
             styles="my_styles",
@@ -323,9 +338,12 @@ class TestModifierRegistry:
 
 class TestTemplateModifierRegistry:
     def test_default_registry_is_ready_for_use(self) -> None:
-        result = TEMPLATE_MODIFIER_REGISTRY.parse(["loop", "2", "no_blank"])
+        result = TEMPLATE_MODIFIER_REGISTRY.parse(
+            ["loop", "2", "no_blank", "no_merge"]
+        )
 
         assert result == TemplateModifiers(
             loops=(LoopDescriptor(name="i", iterations=2),),
             no_blank=True,
+            no_merge=True,
         )

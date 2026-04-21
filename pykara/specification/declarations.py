@@ -21,7 +21,16 @@ TEMPLATE_DECLARATION = DeclarationSpecification(
     name="template",
     allowed_scopes=frozenset({Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR}),
     allowed_modifiers=frozenset(
-        {"loop", "no_blank", "no_text", "fx", "styles", "when", "unless"}
+        {
+            "loop",
+            "no_blank",
+            "no_merge",
+            "no_text",
+            "fx",
+            "styles",
+            "when",
+            "unless",
+        }
     ),
     description="Generate effect lines from parameterized text.",
 )

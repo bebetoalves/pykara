@@ -13,6 +13,33 @@ from pykara.support import (
     trim,
     words,
 )
+from pykara.support.ass_tags import merge_adjacent_override_blocks
+
+
+class TestMergeAdjacentOverrideBlocks:
+    def test_merges_two_adjacent_override_blocks(self) -> None:
+        assert (
+            merge_adjacent_override_blocks(r"{\an5}{\blur2}go")
+            == r"{\an5\blur2}go"
+        )
+
+    def test_merges_more_than_two_adjacent_override_blocks(self) -> None:
+        assert (
+            merge_adjacent_override_blocks(r"{\an5}{\blur2}{\bord1}go")
+            == r"{\an5\blur2\bord1}go"
+        )
+
+    def test_leaves_drawing_text_between_blocks_unchanged(self) -> None:
+        assert (
+            merge_adjacent_override_blocks(r"{\p1}m 0 0 l 1 1{\p0}")
+            == r"{\p1}m 0 0 l 1 1{\p0}"
+        )
+
+    def test_leaves_non_override_blocks_unchanged(self) -> None:
+        assert (
+            merge_adjacent_override_blocks(r"{comment}{\blur2}go")
+            == r"{comment}{\blur2}go"
+        )
 
 
 class TestClamp:

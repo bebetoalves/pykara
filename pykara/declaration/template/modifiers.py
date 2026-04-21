@@ -34,6 +34,7 @@ class TemplateModifiers:
 
     loops: tuple[LoopDescriptor, ...] = ()
     no_blank: bool = False
+    no_merge: bool = False
     no_text: bool = False
     fx: str | None = None
     styles: str | None = None
@@ -168,6 +169,20 @@ class NoTextModifier:
         current: TemplateModifiers,
     ) -> tuple[TemplateModifiers, list[str]]:
         return replace(current, no_text=True), remaining_tokens
+
+
+class NoMergeModifier:
+    """Parse the no_merge modifier."""
+
+    keyword: ClassVar[str] = "no_merge"
+    aliases: ClassVar[tuple[str, ...]] = ()
+
+    def apply(
+        self,
+        remaining_tokens: list[str],
+        current: TemplateModifiers,
+    ) -> tuple[TemplateModifiers, list[str]]:
+        return replace(current, no_merge=True), remaining_tokens
 
 
 class FxModifier:

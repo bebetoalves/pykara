@@ -54,6 +54,16 @@ MODIFIER_SPECIFICATIONS: dict[str, ModifierSpecification] = {
         ),
         description="Do not append the source scope text to the output.",
     ),
+    "no_merge": ModifierSpecification(
+        keyword="no_merge",
+        aliases=(),
+        takes_argument=False,
+        applicable_to=frozenset({"template"}),
+        allowed_scopes=frozenset(
+            {Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR}
+        ),
+        description="Keep adjacent ASS override blocks separate.",
+    ),
     "fx": ModifierSpecification(
         keyword="fx",
         aliases=(),

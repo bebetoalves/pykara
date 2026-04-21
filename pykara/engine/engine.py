@@ -39,6 +39,7 @@ from pykara.processing.line_preprocessor import (
     PositionedLine,
 )
 from pykara.processing.text_renderer import TextRenderer
+from pykara.support.ass_tags import merge_adjacent_override_blocks
 
 _PLAIN_WORD_PATTERN = re.compile(r"[ \t]*[^ \t]+")
 _TEMPLATE_VARIABLE_PATTERN = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*)")
@@ -1020,6 +1021,8 @@ class Engine:
             output.text = prepend_text + template_text + injected_text
         if not declaration.modifiers.no_text:
             output.text += suffix_text
+        if not declaration.modifiers.no_merge:
+            output.text = merge_adjacent_override_blocks(output.text)
         return output.to_event()
 
     @contextmanager

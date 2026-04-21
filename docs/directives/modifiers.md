@@ -13,6 +13,7 @@ template syl loop 3 no_blank
 |----------|------------|----------|-------------------------------|----------------------------------------------------|
 | `loop` | `template` | yes | `line`, `word`, `syl`, `char` | Repeat the template N times. |
 | `no_blank` | `template` | no | `line`, `word`, `syl`, `char` | Skip empty lines, words, syllables, or characters. |
+| `no_merge` | `template` | no | `line`, `word`, `syl`, `char` | Keep adjacent ASS override blocks separate. |
 | `no_text` | `template` | no | `line`, `word`, `syl`, `char` | Do not append source text to the output. |
 | `prepend` | `mixin` | no | `line`, `word`, `syl`, `char` | Insert before the template body. |
 | `layer` | `mixin` | integer | `line`, `word`, `syl`, `char` | Match templates that set this output layer. |
@@ -44,6 +45,17 @@ Skip lines, words, syllables, or characters that have no visible text.
 
 Do not append the source text to the generated line. Useful when the
 template provides its own text.
+
+## `no_merge`
+
+By default, adjacent ASS override blocks in the final generated text are
+merged. For example, `{\an5}{\blur2}` becomes `{\an5\blur2}`.
+
+Use `no_merge` to preserve separate blocks:
+
+```ass
+template syl no_merge
+```
 
 ## `fx`
 

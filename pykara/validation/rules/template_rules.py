@@ -35,6 +35,8 @@ def _iter_active_modifiers(
         active_modifiers.append("loop")
     if modifiers.no_blank:
         active_modifiers.append("no_blank")
+    if modifiers.no_merge:
+        active_modifiers.append("no_merge")
     if modifiers.no_text:
         active_modifiers.append("no_text")
     if modifiers.fx is not None:

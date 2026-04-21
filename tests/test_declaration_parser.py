@@ -70,7 +70,7 @@ class TestDeclarationParser:
                     style="StyleB",
                 ),
                 make_event(
-                    effect="template char no_blank no_text",
+                    effect="template char no_blank no_merge no_text",
                     text="char body",
                     style="StyleB",
                     actor="lead",
@@ -133,6 +133,7 @@ class TestDeclarationParser:
         assert isinstance(char_declaration, TemplateDeclaration)
         assert char_declaration.scope is Scope.CHAR
         assert char_declaration.modifiers.no_blank is True
+        assert char_declaration.modifiers.no_merge is True
         assert char_declaration.modifiers.no_text is True
         assert char_declaration.actor == "lead"
 

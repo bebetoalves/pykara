@@ -944,6 +944,72 @@ class TestEngineIntegration:
             "S1:<al>al",
         ]
 
+    def test_mixin_tags_are_merged_with_template_tags_by_default(
+        self,
+    ) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody(r"{\an5}"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(),
+                )
+            ],
+            mixin_syl=[
+                MixinDeclaration(
+                    body=MixinBody(r"{\blur2}"),
+                    scope=Scope.SYL,
+                    modifiers=MixinModifiers(),
+                )
+            ],
+        )
+
+        results = engine.apply(
+            [make_event()],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == [
+            r"{\an5\blur2}go",
+            r"{\an5\blur2}al",
+        ]
+
+    def test_no_merge_keeps_mixin_and_template_tag_blocks_separate(
+        self,
+    ) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody(r"{\an5}"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(no_merge=True),
+                )
+            ],
+            mixin_syl=[
+                MixinDeclaration(
+                    body=MixinBody(r"{\blur2}"),
+                    scope=Scope.SYL,
+                    modifiers=MixinModifiers(),
+                )
+            ],
+        )
+
+        results = engine.apply(
+            [make_event()],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == [
+            r"{\an5}{\blur2}go",
+            r"{\an5}{\blur2}al",
+        ]
+
     def test_mixin_prepend_layer_and_actor_filters_template_output(
         self,
     ) -> None:
