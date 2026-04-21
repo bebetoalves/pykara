@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 
 from pykara.data import Event
-from pykara.parsing import PatchDeclaration, TemplateDeclaration
+from pykara.parsing import MixinDeclaration, TemplateDeclaration
 from pykara.specification import (
     MODIFIER_SPECIFICATIONS,
     SCOPE_SPECIFICATIONS,
@@ -29,7 +29,7 @@ class EventStyleReference:
 class TemplateVariableReference:
     """One variable reference found inside a template body."""
 
-    declaration: TemplateDeclaration | PatchDeclaration
+    declaration: TemplateDeclaration | MixinDeclaration
     variable_name: str
 
 
@@ -37,21 +37,21 @@ class TemplateVariableReference:
 class FxModifierUsage:
     """One declaration using the fx modifier."""
 
-    declaration: TemplateDeclaration | PatchDeclaration
+    declaration: TemplateDeclaration | MixinDeclaration
 
 
 @dataclass(frozen=True, slots=True)
-class PatchTemplateReference:
-    """One patch declaration to validate against template declarations."""
+class MixinTemplateReference:
+    """One mixin declaration to validate against template declarations."""
 
-    patch: PatchDeclaration
+    mixin: MixinDeclaration
     templates: tuple[TemplateDeclaration, ...]
 
 
 def iter_template_variables(
-    declaration: TemplateDeclaration | PatchDeclaration,
+    declaration: TemplateDeclaration | MixinDeclaration,
 ) -> tuple[str, ...]:
-    """Return all `$var` references found inside a template or patch body."""
+    """Return all `$var` references found inside a template or mixin body."""
 
     return tuple(_TEMPLATE_VARIABLE_PATTERN.findall(declaration.body.text))
 
@@ -134,15 +134,15 @@ class FxModifierScopeRule:
 
 
 @dataclass(frozen=True, slots=True)
-class PatchTemplateCompatibilityRule:
-    """Ensure every patch has at least one compatible active template."""
+class MixinTemplateCompatibilityRule:
+    """Ensure every mixin has at least one compatible active template."""
 
-    code: str = "cross.patch_template_compatible"
+    code: str = "cross.mixin_template_compatible"
     severity: Severity = Severity.ERROR
 
-    def check(self, subject: PatchTemplateReference) -> Violation | None:
+    def check(self, subject: MixinTemplateReference) -> Violation | None:
         if any(
-            self._is_compatible(subject.patch, template)
+            self._is_compatible(subject.mixin, template)
             for template in subject.templates
         ):
             return None
@@ -151,26 +151,26 @@ class PatchTemplateCompatibilityRule:
             severity=self.severity,
             code=self.code,
             message=(
-                "Patch declaration must target at least one compatible "
+                "Mixin declaration must target at least one compatible "
                 "template with the same scope and style."
             ),
             context=(
-                f"scope={subject.patch.scope.value!r}, "
-                f"style={subject.patch.style!r}, "
-                f"for_actor={subject.patch.modifiers.for_actor!r}"
+                f"scope={subject.mixin.scope.value!r}, "
+                f"style={subject.mixin.style!r}, "
+                f"for_actor={subject.mixin.modifiers.for_actor!r}"
             ),
-            location="patch",
+            location="mixin",
         )
 
     def _is_compatible(
         self,
-        patch: PatchDeclaration,
+        mixin: MixinDeclaration,
         template: TemplateDeclaration,
     ) -> bool:
-        if patch.scope is not template.scope:
+        if mixin.scope is not template.scope:
             return False
-        if template.style and template.style != patch.style:
+        if template.style and template.style != mixin.style:
             return False
-        if patch.modifiers.for_actor is None:
+        if mixin.modifiers.for_actor is None:
             return True
-        return template.actor == patch.modifiers.for_actor
+        return template.actor == mixin.modifiers.for_actor

@@ -2,6 +2,14 @@
 
 Template variables are accessed with `$name`.
 
+Values assigned by `code` directives are also available through `$name` in
+later template and mixin bodies. The same values remain available in `!expr!`.
+
+```ass
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code setup,main = color.rgb_to_ass(255, 200, 0)
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template syl,{\1c$main}
+```
+
 ## Available Variables
 
 ### Generated Line Variables

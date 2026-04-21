@@ -1,6 +1,6 @@
 # Modifiers
 
-Modifiers refine how a `template` or `patch` directive runs. They follow
+Modifiers refine how a `template` or `mixin` directive runs. They follow
 the scope token in the `Effect` field.
 
 ```ass
@@ -14,13 +14,13 @@ template syl loop 3 no_blank
 | `loop` | `template` | yes | `line`, `word`, `syl`, `char` | Repeat the template N times. |
 | `no_blank` | `template` | no | `line`, `word`, `syl`, `char` | Skip empty lines, words, syllables, or characters. |
 | `no_text` | `template` | no | `line`, `word`, `syl`, `char` | Do not append source text to the output. |
-| `prepend` | `patch` | no | `line`, `word`, `syl`, `char` | Insert before the template body. |
-| `layer` | `patch` | integer | `line`, `word`, `syl`, `char` | Match templates that set this output layer. |
-| `for` | `patch` | actor name | `line`, `word`, `syl`, `char` | Match templates with this actor. |
-| `fx` | `template`, `patch` | yes | `syl` | Match only syllables with the given inline-fx tag. |
+| `prepend` | `mixin` | no | `line`, `word`, `syl`, `char` | Insert before the template body. |
+| `layer` | `mixin` | integer | `line`, `word`, `syl`, `char` | Match templates that set this output layer. |
+| `for` | `mixin` | actor name | `line`, `word`, `syl`, `char` | Match templates with this actor. |
+| `fx` | `template`, `mixin` | yes | `syl` | Match only syllables with the given inline-fx tag. |
 | `styles` | `template`, `code` | tuple variable | `setup`, `line`, `word`, `syl`, `char` | Apply only to karaoke events using one of the listed styles. |
-| `when` | `template`, `patch` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is truthy. |
-| `unless` | `template`, `patch` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is falsy. |
+| `when` | `template`, `mixin` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is truthy. |
+| `unless` | `template`, `mixin` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is falsy. |
 
 ## `loop`
 
@@ -75,29 +75,29 @@ accepted.
 ## `prepend`
 
 ```ass
-patch syl prepend
+mixin syl prepend
 ```
 
-Insert the patch body before the template body instead of before the
+Insert the mixin body before the template body instead of before the
 source object text.
 
 ## `layer`
 
 ```ass
-patch syl layer 2
+mixin syl layer 2
 ```
 
-Apply the patch only when the generated line has the given layer. This is
+Apply the mixin only when the generated line has the given layer. This is
 checked after the template body has run, so `!layer.set(2)!` inside the
-template can select the patch.
+template can select the mixin.
 
 ## `for`
 
 ```ass
-patch syl for lead
+mixin syl for lead
 ```
 
-Apply the patch only to templates whose `Name`/actor field is `lead`.
+Apply the mixin only to templates whose `Name`/actor field is `lead`.
 
 ## `when` / `unless`
 

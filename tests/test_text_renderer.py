@@ -99,6 +99,15 @@ class TestTextRenderer:
 
         assert rendered == r"pos(35,80)37"
 
+    def test_renders_code_namespace_values_as_variables(self) -> None:
+        renderer = TextRenderer()
+        env = make_env()
+        env.user_namespace["accent"] = r"&H00AAFF&"
+
+        rendered = renderer.render(r"{\1c$accent}", env)
+
+        assert rendered == r"{\1c&H00AAFF&}"
+
     def test_exposes_style_object_in_expressions(self) -> None:
         renderer = TextRenderer()
         env = make_env()

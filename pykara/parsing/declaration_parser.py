@@ -1,4 +1,4 @@
-"""Parser for template and code declaration events."""
+"""Parser for template, mixin, and code declaration events."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pykara.data import Event
 from pykara.declaration import Scope
 from pykara.declaration._shared import ModifierRegistry
 from pykara.declaration.code import CodeBody, CodeModifiers
-from pykara.declaration.patch import PatchBody, PatchModifiers
+from pykara.declaration.mixin import MixinBody, MixinModifiers
 from pykara.declaration.template import TemplateBody, TemplateModifiers
 from pykara.errors import (
     DeclarativeParseError,
@@ -30,7 +30,7 @@ def _empty_template_declarations() -> list[TemplateDeclaration]:
     return []
 
 
-def _empty_patch_declarations() -> list[PatchDeclaration]:
+def _empty_mixin_declarations() -> list[MixinDeclaration]:
     return []
 
 
@@ -61,12 +61,12 @@ class CodeDeclaration:
 
 
 @dataclass(frozen=True, slots=True)
-class PatchDeclaration:
-    """One parsed patch declaration."""
+class MixinDeclaration:
+    """One parsed mixin declaration."""
 
-    body: PatchBody
+    body: MixinBody
     scope: Scope
-    modifiers: PatchModifiers
+    modifiers: MixinModifiers
     style: str = ""
     actor: str = ""
 
@@ -90,17 +90,17 @@ class ParsedDeclarations:
     char: list[TemplateDeclaration] = field(
         default_factory=_empty_template_declarations
     )
-    patch_line: list[PatchDeclaration] = field(
-        default_factory=_empty_patch_declarations
+    mixin_line: list[MixinDeclaration] = field(
+        default_factory=_empty_mixin_declarations
     )
-    patch_word: list[PatchDeclaration] = field(
-        default_factory=_empty_patch_declarations
+    mixin_word: list[MixinDeclaration] = field(
+        default_factory=_empty_mixin_declarations
     )
-    patch_syl: list[PatchDeclaration] = field(
-        default_factory=_empty_patch_declarations
+    mixin_syl: list[MixinDeclaration] = field(
+        default_factory=_empty_mixin_declarations
     )
-    patch_char: list[PatchDeclaration] = field(
-        default_factory=_empty_patch_declarations
+    mixin_char: list[MixinDeclaration] = field(
+        default_factory=_empty_mixin_declarations
     )
     active_styles: set[str] = field(default_factory=_empty_active_styles)
 
@@ -111,11 +111,11 @@ class DeclarationParser:
     def __init__(
         self,
         template_mod_registry: ModifierRegistry[TemplateModifiers],
-        patch_mod_registry: ModifierRegistry[PatchModifiers],
+        mixin_mod_registry: ModifierRegistry[MixinModifiers],
         code_mod_registry: ModifierRegistry[CodeModifiers],
     ) -> None:
         self._template_mod_registry = template_mod_registry
-        self._patch_mod_registry = patch_mod_registry
+        self._mixin_mod_registry = mixin_mod_registry
         self._code_mod_registry = code_mod_registry
 
     def parse(self, events: list[Event]) -> ParsedDeclarations:
@@ -146,7 +146,7 @@ class DeclarationParser:
 
     def _parse_event(
         self, event: Event
-    ) -> TemplateDeclaration | CodeDeclaration | PatchDeclaration | None:
+    ) -> TemplateDeclaration | CodeDeclaration | MixinDeclaration | None:
         """Parse one event when it contains a supported declaration."""
 
         if not event.comment:
@@ -175,8 +175,8 @@ class DeclarationParser:
                 ),
             )
 
-        if declaration_name == "patch":
-            declaration_style, remaining_tokens = self._parse_patch_style(
+        if declaration_name == "mixin":
+            declaration_style, remaining_tokens = self._parse_mixin_style(
                 event=event,
                 effect_field=event.effect,
                 remaining_tokens=remaining_tokens,
@@ -201,13 +201,13 @@ class DeclarationParser:
                 actor=event.actor,
             )
 
-        if declaration_name == "patch":
-            modifiers = self._parse_patch_modifiers(
+        if declaration_name == "mixin":
+            modifiers = self._parse_mixin_modifiers(
                 effect_field=event.effect,
                 tokens=remaining_tokens,
             )
-            return PatchDeclaration(
-                body=PatchBody(event.text),
+            return MixinDeclaration(
+                body=MixinBody(event.text),
                 scope=scope,
                 modifiers=modifiers,
                 style=declaration_style,
@@ -239,19 +239,19 @@ class DeclarationParser:
 
         return event.style, remaining_tokens
 
-    def _parse_patch_style(
+    def _parse_mixin_style(
         self,
         *,
         event: Event,
         effect_field: str,
         remaining_tokens: list[str],
     ) -> tuple[str, list[str]]:
-        """Return the patch style filter and reject unsupported all selector."""
+        """Return the mixin style filter and reject unsupported all selector."""
 
         if remaining_tokens and remaining_tokens[0].lower() == "all":
             raise DeclarativeParseError(
                 effect_field=effect_field,
-                message="'all' is not allowed for patch declarations",
+                message="'all' is not allowed for mixin declarations",
             )
         return event.style, remaining_tokens
 
@@ -303,21 +303,21 @@ class DeclarationParser:
                 ),
             ) from error
 
-    def _parse_patch_modifiers(
+    def _parse_mixin_modifiers(
         self,
         *,
         effect_field: str,
         tokens: list[str],
-    ) -> PatchModifiers:
-        """Parse patch modifiers through the injected registry."""
+    ) -> MixinModifiers:
+        """Parse mixin modifiers through the injected registry."""
 
         try:
-            return self._patch_mod_registry.parse(tokens)
+            return self._mixin_mod_registry.parse(tokens)
         except UnknownModifierError as error:
             raise DeclarativeParseError(
                 effect_field=effect_field,
                 message=(
-                    f"Unexpected token after patch scope: {error.modifier!r}"
+                    f"Unexpected token after mixin scope: {error.modifier!r}"
                 ),
             ) from error
 
@@ -350,7 +350,7 @@ class DeclarationParser:
     def _append_declaration(
         self,
         parsed: ParsedDeclarations,
-        declaration: TemplateDeclaration | CodeDeclaration | PatchDeclaration,
+        declaration: TemplateDeclaration | CodeDeclaration | MixinDeclaration,
     ) -> None:
         """Append one parsed declaration to the matching scope bucket."""
 
@@ -362,28 +362,28 @@ class DeclarationParser:
             return
 
         if declaration.scope is Scope.LINE:
-            if isinstance(declaration, PatchDeclaration):
-                parsed.patch_line.append(declaration)
+            if isinstance(declaration, MixinDeclaration):
+                parsed.mixin_line.append(declaration)
             else:
                 parsed.line.append(declaration)
             return
 
         if declaration.scope is Scope.WORD:
-            if isinstance(declaration, PatchDeclaration):
-                parsed.patch_word.append(declaration)
+            if isinstance(declaration, MixinDeclaration):
+                parsed.mixin_word.append(declaration)
             else:
                 parsed.word.append(declaration)
             return
 
         if declaration.scope is Scope.SYL:
-            if isinstance(declaration, PatchDeclaration):
-                parsed.patch_syl.append(declaration)
+            if isinstance(declaration, MixinDeclaration):
+                parsed.mixin_syl.append(declaration)
             else:
                 parsed.syl.append(declaration)
             return
 
-        if isinstance(declaration, PatchDeclaration):
-            parsed.patch_char.append(declaration)
+        if isinstance(declaration, MixinDeclaration):
+            parsed.mixin_char.append(declaration)
             return
         if not isinstance(declaration, TemplateDeclaration):
             message = "CHAR scope is only valid for template declarations."

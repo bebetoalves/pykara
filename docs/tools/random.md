@@ -27,3 +27,11 @@ values every time. Without a seed, each run may produce different values.
 ```sh
 pykara input.ass output.ass --seed 42
 ```
+
+Code can reseed the same RNG by assigning `_seed = N`. The CLI seed initializes
+the run first, then each `_seed` assignment in any `code` scope controls later
+`random` calls.
+
+```ass
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code setup,_seed = 7
+```

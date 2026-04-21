@@ -1,4 +1,4 @@
-"""Patch modifier models and parser handlers."""
+"""Mixin modifier models and parser handlers."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pykara.errors import ModifierParseError
 
 
 @dataclass(frozen=True, slots=True)
-class PatchModifiers:
-    """Normalized patch modifiers parsed from effect tokens."""
+class MixinModifiers:
+    """Normalized mixin modifiers parsed from effect tokens."""
 
     prepend: bool = False
     layer: int | None = None
@@ -30,8 +30,8 @@ class PrependModifier:
     def apply(
         self,
         remaining_tokens: list[str],
-        current: PatchModifiers,
-    ) -> tuple[PatchModifiers, list[str]]:
+        current: MixinModifiers,
+    ) -> tuple[MixinModifiers, list[str]]:
         return replace(current, prepend=True), remaining_tokens
 
 
@@ -44,8 +44,8 @@ class LayerModifier:
     def apply(
         self,
         remaining_tokens: list[str],
-        current: PatchModifiers,
-    ) -> tuple[PatchModifiers, list[str]]:
+        current: MixinModifiers,
+    ) -> tuple[MixinModifiers, list[str]]:
         if not remaining_tokens:
             raise ModifierParseError("layer", "expected integer after 'layer'")
         try:
@@ -67,8 +67,8 @@ class ForModifier:
     def apply(
         self,
         remaining_tokens: list[str],
-        current: PatchModifiers,
-    ) -> tuple[PatchModifiers, list[str]]:
+        current: MixinModifiers,
+    ) -> tuple[MixinModifiers, list[str]]:
         if not remaining_tokens:
             raise ModifierParseError("for", "expected actor name after 'for'")
         return (
@@ -77,7 +77,7 @@ class ForModifier:
         )
 
 
-class PatchFxModifier:
+class MixinFxModifier:
     """Parse the fx modifier."""
 
     keyword: ClassVar[str] = "fx"
@@ -86,14 +86,14 @@ class PatchFxModifier:
     def apply(
         self,
         remaining_tokens: list[str],
-        current: PatchModifiers,
-    ) -> tuple[PatchModifiers, list[str]]:
+        current: MixinModifiers,
+    ) -> tuple[MixinModifiers, list[str]]:
         if not remaining_tokens:
             raise ModifierParseError("fx", "expected name after 'fx'")
         return replace(current, fx=remaining_tokens[0]), remaining_tokens[1:]
 
 
-class PatchWhenModifier:
+class MixinWhenModifier:
     """Parse the when modifier."""
 
     keyword: ClassVar[str] = "when"
@@ -102,8 +102,8 @@ class PatchWhenModifier:
     def apply(
         self,
         remaining_tokens: list[str],
-        current: PatchModifiers,
-    ) -> tuple[PatchModifiers, list[str]]:
+        current: MixinModifiers,
+    ) -> tuple[MixinModifiers, list[str]]:
         expression, rest = consume_condition_expression(
             "when",
             remaining_tokens,
@@ -111,7 +111,7 @@ class PatchWhenModifier:
         return replace(current, when=expression), rest
 
 
-class PatchUnlessModifier:
+class MixinUnlessModifier:
     """Parse the unless modifier."""
 
     keyword: ClassVar[str] = "unless"
@@ -120,8 +120,8 @@ class PatchUnlessModifier:
     def apply(
         self,
         remaining_tokens: list[str],
-        current: PatchModifiers,
-    ) -> tuple[PatchModifiers, list[str]]:
+        current: MixinModifiers,
+    ) -> tuple[MixinModifiers, list[str]]:
         expression, rest = consume_condition_expression(
             "unless",
             remaining_tokens,

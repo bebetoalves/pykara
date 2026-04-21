@@ -7,11 +7,11 @@ from dataclasses import replace
 from pykara.data import Event, Metadata, Style, Syllable
 from pykara.declaration import Scope
 from pykara.declaration.code import CodeBody
-from pykara.declaration.patch import PatchBody, PatchModifiers
+from pykara.declaration.mixin import MixinBody, MixinModifiers
 from pykara.declaration.template import TemplateBody, TemplateModifiers
 from pykara.parsing import (
     CodeDeclaration,
-    PatchDeclaration,
+    MixinDeclaration,
     TemplateDeclaration,
 )
 from pykara.validation.reports import Severity
@@ -30,10 +30,10 @@ from pykara.validation.rules.metadata_rules import (
     PositiveResolutionRule,
     PositiveVideoCorrectFactorRule,
 )
-from pykara.validation.rules.patch_rules import (
-    CompatiblePatchModifierScopeRule,
-    PatchAllowedScopeRule,
-    PatchPythonExpressionSyntaxRule,
+from pykara.validation.rules.mixin_rules import (
+    CompatibleMixinModifierScopeRule,
+    MixinAllowedScopeRule,
+    MixinPythonExpressionSyntaxRule,
 )
 from pykara.validation.rules.style_rules import (
     NonNegativeMarginsRule,
@@ -49,7 +49,7 @@ from pykara.validation.validators import (
     EventValidator,
     KaraokeValidator,
     MetadataValidator,
-    PatchValidator,
+    MixinValidator,
     StyleValidator,
     TemplateValidator,
 )
@@ -138,11 +138,11 @@ def make_code_declaration() -> CodeDeclaration:
     )
 
 
-def make_patch_declaration() -> PatchDeclaration:
-    return PatchDeclaration(
-        body=PatchBody(r"{\1c&HFFFFFF&}!x + 1!"),
+def make_mixin_declaration() -> MixinDeclaration:
+    return MixinDeclaration(
+        body=MixinBody(r"{\1c&HFFFFFF&}!x + 1!"),
         scope=Scope.SYL,
-        modifiers=PatchModifiers(),
+        modifiers=MixinModifiers(),
     )
 
 
@@ -443,49 +443,49 @@ class TestCodeRules:
         )
 
 
-class TestPatchRules:
-    def test_patch_allowed_scope_rule_accepts_valid_patch(self) -> None:
-        assert PatchAllowedScopeRule().check(make_patch_declaration()) is None
+class TestMixinRules:
+    def test_mixin_allowed_scope_rule_accepts_valid_mixin(self) -> None:
+        assert MixinAllowedScopeRule().check(make_mixin_declaration()) is None
 
-    def test_patch_python_expression_rule_reports_unsupported_syntax(
+    def test_mixin_python_expression_rule_reports_unsupported_syntax(
         self,
     ) -> None:
-        violation = PatchPythonExpressionSyntaxRule().check(
+        violation = MixinPythonExpressionSyntaxRule().check(
             replace(
-                make_patch_declaration(),
-                body=PatchBody("!value .. other!"),
+                make_mixin_declaration(),
+                body=MixinBody("!value .. other!"),
             )
         )
 
         assert violation is not None
-        assert violation.code == "patch.expression_python_only"
+        assert violation.code == "mixin.expression_python_only"
         assert violation.severity is Severity.ERROR
 
-    def test_patch_modifier_scope_rule_reports_incompatible_modifier(
+    def test_mixin_modifier_scope_rule_reports_incompatible_modifier(
         self,
     ) -> None:
-        violation = CompatiblePatchModifierScopeRule().check(
+        violation = CompatibleMixinModifierScopeRule().check(
             replace(
-                make_patch_declaration(),
+                make_mixin_declaration(),
                 scope=Scope.LINE,
-                modifiers=PatchModifiers(fx="flash"),
+                modifiers=MixinModifiers(fx="flash"),
             )
         )
 
         assert violation is not None
-        assert violation.code == "patch.modifier_scope_compatible"
+        assert violation.code == "mixin.modifier_scope_compatible"
         assert violation.severity is Severity.ERROR
 
-    def test_patch_validator_aggregates_rule_results(self) -> None:
-        report = PatchValidator().validate(
-            PatchDeclaration(
-                body=PatchBody("!value .. other!"),
+    def test_mixin_validator_aggregates_rule_results(self) -> None:
+        report = MixinValidator().validate(
+            MixinDeclaration(
+                body=MixinBody("!value .. other!"),
                 scope=Scope.LINE,
-                modifiers=PatchModifiers(fx="flash"),
+                modifiers=MixinModifiers(fx="flash"),
             )
         )
 
         assert tuple(violation.code for violation in report.violations) == (
-            "patch.expression_python_only",
-            "patch.modifier_scope_compatible",
+            "mixin.expression_python_only",
+            "mixin.modifier_scope_compatible",
         )

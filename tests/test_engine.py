@@ -14,7 +14,7 @@ import pytest
 from pykara.data import Event, Metadata, Style
 from pykara.declaration import Scope
 from pykara.declaration.code import CodeBody, CodeModifiers
-from pykara.declaration.patch import PatchBody, PatchModifiers
+from pykara.declaration.mixin import MixinBody, MixinModifiers
 from pykara.declaration.template import (
     LoopDescriptor,
     TemplateBody,
@@ -32,8 +32,8 @@ from pykara.errors import (
 )
 from pykara.parsing import (
     CodeDeclaration,
+    MixinDeclaration,
     ParsedDeclarations,
-    PatchDeclaration,
     TemplateDeclaration,
 )
 from pykara.processing.font_metrics import TextMeasurement
@@ -271,6 +271,24 @@ class TestCodeRunner:
 
         assert env.user_namespace["value"] == 2
 
+    def test_reseeds_random_when_seed_is_assigned(self) -> None:
+        runner = _CodeRunner()
+        env = make_env()
+
+        runner.run("_seed = 7", env)
+
+        assert env.rng.randint(1, 100) == 42
+
+    def test_does_not_reapply_seed_when_other_code_runs(self) -> None:
+        runner = _CodeRunner()
+        env = make_env()
+
+        runner.run("_seed = 7", env)
+        assert env.rng.randint(1, 100) == 42
+        runner.run("value = 1", env)
+
+        assert env.rng.randint(1, 100) == 20
+
     def test_raises_template_code_error_on_syntax_failure(self) -> None:
         runner = _CodeRunner()
 
@@ -291,6 +309,86 @@ class TestCodeRunner:
 
 
 class TestEngineIntegration:
+    def test_template_variables_include_values_defined_by_code(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            line=[
+                CodeDeclaration(
+                    body=CodeBody("label = f'{line.i}:{line.text}'"),
+                    scope=Scope.LINE,
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("$label"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(no_text=True),
+                ),
+            ]
+        )
+
+        results = engine.apply(
+            [make_event()],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == ["0:goal"]
+
+    def test_cli_seed_runs_before_code_seed(self) -> None:
+        engine = Engine(
+            LinePreprocessor(FakeExtentsProvider({"goal": 40.0})),
+            rng_seed=42,
+        )
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody("first = random.randint(1, 100); _seed = 7"),
+                    scope=Scope.SETUP,
+                )
+            ],
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("$first:!random.randint(1, 100)!"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(no_text=True),
+                )
+            ],
+        )
+
+        results = engine.apply(
+            [make_event()],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == ["82:42"]
+
+    def test_scoped_code_can_reseed_random(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            line=[
+                CodeDeclaration(
+                    body=CodeBody("_seed = line.i + 5"),
+                    scope=Scope.LINE,
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("!random.randint(1, 100)!"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(no_text=True),
+                ),
+            ]
+        )
+
+        results = engine.apply(
+            [make_event(), make_event()],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == ["80", "74"]
+
     def test_template_styles_modifier_uses_reference_style_metrics(
         self,
     ) -> None:
@@ -534,12 +632,12 @@ class TestEngineIntegration:
                     ),
                 )
             ],
-            patch_syl=[
-                PatchDeclaration(
-                    body=PatchBody("{patched}"),
+            mixin_syl=[
+                MixinDeclaration(
+                    body=MixinBody("{mixed}"),
                     scope=Scope.SYL,
                     style="Romaji",
-                    modifiers=PatchModifiers(for_actor="start"),
+                    modifiers=MixinModifiers(for_actor="start"),
                 )
             ],
         )
@@ -558,8 +656,8 @@ class TestEngineIntegration:
         )
 
         assert [(result.style, result.text) for result in results] == [
-            ("Romaji", "Romaji:ro:30{patched}"),
-            ("Kanji", "Kanji:漢:50{patched}"),
+            ("Romaji", "Romaji:ro:30{mixed}"),
+            ("Kanji", "Kanji:漢:50{mixed}"),
         ]
 
     def test_code_styles_modifier_uses_reference_style_context(self) -> None:
@@ -814,7 +912,7 @@ class TestEngineIntegration:
                 {"Default": make_style()},
             )
 
-    def test_patch_injects_tags_before_matching_syllable_text(self) -> None:
+    def test_mixin_injects_tags_before_matching_syllable_text(self) -> None:
         engine = build_engine()
         event = make_event()
         declarations = ParsedDeclarations(
@@ -825,11 +923,11 @@ class TestEngineIntegration:
                     modifiers=TemplateModifiers(),
                 ),
             ],
-            patch_syl=[
-                PatchDeclaration(
-                    body=PatchBody("<!syl.text!>"),
+            mixin_syl=[
+                MixinDeclaration(
+                    body=MixinBody("<!syl.text!>"),
                     scope=Scope.SYL,
-                    modifiers=PatchModifiers(),
+                    modifiers=MixinModifiers(),
                 )
             ],
         )
@@ -846,7 +944,7 @@ class TestEngineIntegration:
             "S1:<al>al",
         ]
 
-    def test_patch_prepend_layer_and_actor_filters_template_output(
+    def test_mixin_prepend_layer_and_actor_filters_template_output(
         self,
     ) -> None:
         engine = build_engine()
@@ -866,30 +964,30 @@ class TestEngineIntegration:
                     actor="shadow",
                 ),
             ],
-            patch_line=[
-                PatchDeclaration(
-                    body=PatchBody("P:"),
+            mixin_line=[
+                MixinDeclaration(
+                    body=MixinBody("P:"),
                     scope=Scope.LINE,
-                    modifiers=PatchModifiers(
+                    modifiers=MixinModifiers(
                         prepend=True,
                         layer=2,
                         for_actor="lead",
                     ),
                 ),
-                PatchDeclaration(
-                    body=PatchBody("I:"),
+                MixinDeclaration(
+                    body=MixinBody("I:"),
                     scope=Scope.LINE,
-                    modifiers=PatchModifiers(layer=2, for_actor="lead"),
+                    modifiers=MixinModifiers(layer=2, for_actor="lead"),
                 ),
-                PatchDeclaration(
-                    body=PatchBody("X:"),
+                MixinDeclaration(
+                    body=MixinBody("X:"),
                     scope=Scope.LINE,
-                    modifiers=PatchModifiers(for_actor="missing"),
+                    modifiers=MixinModifiers(for_actor="missing"),
                 ),
-                PatchDeclaration(
-                    body=PatchBody("A:"),
+                MixinDeclaration(
+                    body=MixinBody("A:"),
                     scope=Scope.LINE,
-                    modifiers=PatchModifiers(layer=2),
+                    modifiers=MixinModifiers(layer=2),
                     actor="ignored",
                 ),
             ],

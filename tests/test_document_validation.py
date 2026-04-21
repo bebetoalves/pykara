@@ -6,12 +6,12 @@ from pykara.adapters import SubtitleDocument
 from pykara.data import Event, Metadata, Style
 from pykara.declaration import Scope
 from pykara.declaration.code import CodeBody
-from pykara.declaration.patch import PatchBody, PatchModifiers
+from pykara.declaration.mixin import MixinBody, MixinModifiers
 from pykara.declaration.template import TemplateBody, TemplateModifiers
 from pykara.parsing import (
     CodeDeclaration,
+    MixinDeclaration,
     ParsedDeclarations,
-    PatchDeclaration,
     TemplateDeclaration,
 )
 from pykara.validation.reports import ValidationReport
@@ -84,17 +84,17 @@ def make_template_declaration(
     )
 
 
-def make_patch_declaration(
+def make_mixin_declaration(
     *,
     text: str = "{\\bord4}",
     scope: Scope = Scope.SYL,
-    modifiers: PatchModifiers | None = None,
+    modifiers: MixinModifiers | None = None,
     actor: str = "lead",
-) -> PatchDeclaration:
-    return PatchDeclaration(
-        body=PatchBody(text),
+) -> MixinDeclaration:
+    return MixinDeclaration(
+        body=MixinBody(text),
         scope=scope,
-        modifiers=modifiers or PatchModifiers(),
+        modifiers=modifiers or MixinModifiers(),
         actor=actor,
     )
 
@@ -185,22 +185,22 @@ class TestCrossValidator:
             "cross.fx_scope_allowed",
         )
 
-    def test_accepts_patch_with_compatible_template(self) -> None:
+    def test_accepts_mixin_with_compatible_template(self) -> None:
         declarations = ParsedDeclarations(
             syl=[make_template_declaration()],
-            patch_syl=[make_patch_declaration(actor="unrelated")],
+            mixin_syl=[make_mixin_declaration(actor="unrelated")],
         )
 
         report = CrossValidator().validate(make_document(), declarations)
 
         assert report.violations == ()
 
-    def test_reports_patch_for_actor_without_compatible_template(self) -> None:
+    def test_reports_mixin_for_actor_without_compatible_template(self) -> None:
         declarations = ParsedDeclarations(
             syl=[make_template_declaration()],
-            patch_syl=[
-                make_patch_declaration(
-                    modifiers=PatchModifiers(for_actor="missing")
+            mixin_syl=[
+                make_mixin_declaration(
+                    modifiers=MixinModifiers(for_actor="missing")
                 )
             ],
         )
@@ -208,26 +208,26 @@ class TestCrossValidator:
         report = CrossValidator().validate(make_document(), declarations)
 
         assert tuple(violation.code for violation in report.violations) == (
-            "cross.patch_template_compatible",
+            "cross.mixin_template_compatible",
         )
 
-    def test_reports_patch_without_compatible_template(self) -> None:
+    def test_reports_mixin_without_compatible_template(self) -> None:
         declarations = ParsedDeclarations(
             syl=[make_template_declaration()],
-            patch_word=[make_patch_declaration(scope=Scope.WORD)],
+            mixin_word=[make_mixin_declaration(scope=Scope.WORD)],
         )
 
         report = CrossValidator().validate(make_document(), declarations)
 
         assert tuple(violation.code for violation in report.violations) == (
-            "cross.patch_template_compatible",
+            "cross.mixin_template_compatible",
         )
 
-    def test_reports_patch_variable_used_outside_scope(self) -> None:
+    def test_reports_mixin_variable_used_outside_scope(self) -> None:
         declarations = ParsedDeclarations(
             line=[make_template_declaration(scope=Scope.LINE)],
-            patch_line=[
-                make_patch_declaration(text="$syl_x", scope=Scope.LINE)
+            mixin_line=[
+                make_mixin_declaration(text="$syl_x", scope=Scope.LINE)
             ],
         )
 

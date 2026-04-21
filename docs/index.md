@@ -33,14 +33,14 @@ pykara input.ass output.ass --font-dir ./fonts
 | `output` | Destination `.ass` file. |
 | `--json PATH` | Also write generated events as JSON. |
 | `--warn-only` | Demote validation errors to warnings and continue. |
-| `--seed N` | Deterministic RNG seed. |
+| `--seed N` | Initial deterministic RNG seed. |
 | `--font-dir PATH` | Prefer fonts from a directory before user/system fonts. Can be repeated. |
 
 ## Documentation
 
 ### Directives
 
-- [Types](./directives/types.md) — Template, patch, and code directives.
+- [Types](./directives/types.md) — Template, mixin, and code directives.
 - [Scopes](./directives/scopes.md) — Setup, line, word, syllable, and character scopes.
 - [Variables](./directives/variables.md) — Complete `$variable` reference.
 - [Objects](./directives/objects.md) — Properties available in `!expr!`.

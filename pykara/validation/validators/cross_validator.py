@@ -6,8 +6,8 @@ from collections.abc import Iterable
 
 from pykara.adapters import SubtitleDocument
 from pykara.parsing import (
+    MixinDeclaration,
     ParsedDeclarations,
-    PatchDeclaration,
     TemplateDeclaration,
 )
 from pykara.validation.reports import ValidationReport, Violation
@@ -17,8 +17,8 @@ from pykara.validation.rules.cross_rules import (
     ExistingStyleRule,
     FxModifierScopeRule,
     FxModifierUsage,
-    PatchTemplateCompatibilityRule,
-    PatchTemplateReference,
+    MixinTemplateCompatibilityRule,
+    MixinTemplateReference,
     TemplateVariableReference,
     iter_template_variables,
 )
@@ -31,7 +31,7 @@ class CrossValidator:
         self._style_rule = ExistingStyleRule()
         self._variable_scope_rule = AllowedVariableScopeRule()
         self._fx_scope_rule = FxModifierScopeRule()
-        self._patch_template_rule = PatchTemplateCompatibilityRule()
+        self._mixin_template_rule = MixinTemplateCompatibilityRule()
 
     def validate(
         self,
@@ -50,9 +50,9 @@ class CrossValidator:
         violations = (
             *self._validate_style_references(document),
             *self._validate_template_variables(declarations),
-            *self._validate_patch_variables(declarations),
+            *self._validate_mixin_variables(declarations),
             *self._validate_fx_usage(declarations),
-            *self._validate_patch_template_usage(declarations),
+            *self._validate_mixin_template_usage(declarations),
         )
         return ValidationReport(violations)
 
@@ -102,7 +102,7 @@ class CrossValidator:
             violation
             for declaration in (
                 *self._iter_template_declarations(declarations),
-                *self._iter_patch_declarations(declarations),
+                *self._iter_mixin_declarations(declarations),
             )
             if declaration.modifiers.fx is not None
             if (
@@ -113,13 +113,13 @@ class CrossValidator:
             is not None
         )
 
-    def _validate_patch_variables(
+    def _validate_mixin_variables(
         self,
         declarations: ParsedDeclarations,
     ) -> tuple[Violation, ...]:
         return tuple(
             violation
-            for declaration in self._iter_patch_declarations(declarations)
+            for declaration in self._iter_mixin_declarations(declarations)
             for variable_name in iter_template_variables(declaration)
             if (
                 violation := self._variable_scope_rule.check(
@@ -132,18 +132,18 @@ class CrossValidator:
             is not None
         )
 
-    def _validate_patch_template_usage(
+    def _validate_mixin_template_usage(
         self,
         declarations: ParsedDeclarations,
     ) -> tuple[Violation, ...]:
         templates = tuple(self._iter_template_declarations(declarations))
         return tuple(
             violation
-            for declaration in self._iter_patch_declarations(declarations)
+            for declaration in self._iter_mixin_declarations(declarations)
             if (
-                violation := self._patch_template_rule.check(
-                    PatchTemplateReference(
-                        patch=declaration,
+                violation := self._mixin_template_rule.check(
+                    MixinTemplateReference(
+                        mixin=declaration,
                         templates=templates,
                     )
                 )
@@ -169,11 +169,11 @@ class CrossValidator:
 
         yield from declarations.char
 
-    def _iter_patch_declarations(
+    def _iter_mixin_declarations(
         self,
         declarations: ParsedDeclarations,
-    ) -> Iterable[PatchDeclaration]:
-        yield from declarations.patch_line
-        yield from declarations.patch_word
-        yield from declarations.patch_syl
-        yield from declarations.patch_char
+    ) -> Iterable[MixinDeclaration]:
+        yield from declarations.mixin_line
+        yield from declarations.mixin_word
+        yield from declarations.mixin_syl
+        yield from declarations.mixin_char

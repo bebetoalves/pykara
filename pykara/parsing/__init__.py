@@ -3,8 +3,8 @@
 from pykara.parsing.declaration_parser import (
     CodeDeclaration,
     DeclarationParser,
+    MixinDeclaration,
     ParsedDeclarations,
-    PatchDeclaration,
     TemplateDeclaration,
 )
 from pykara.parsing.karaoke_parser import KaraokeParser
@@ -13,7 +13,7 @@ __all__ = [
     "CodeDeclaration",
     "DeclarationParser",
     "KaraokeParser",
+    "MixinDeclaration",
     "ParsedDeclarations",
-    "PatchDeclaration",
     "TemplateDeclaration",
 ]

@@ -1101,7 +1101,8 @@ class Environment:
     def variable_dict(self) -> dict[str, object]:
         """Return variables available through `$name` lookups."""
 
-        variables = self.vars.as_dict()
+        variables = dict(self.user_namespace)
+        variables.update(self.vars.as_dict())
         if self.declaration == "template":
             variables.update(self._template_variables())
         variables.update(self._loop_variables())

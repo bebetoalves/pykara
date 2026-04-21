@@ -26,8 +26,8 @@ TEMPLATE_DECLARATION = DeclarationSpecification(
     description="Generate effect lines from parameterized text.",
 )
 
-PATCH_DECLARATION = DeclarationSpecification(
-    name="patch",
+MIXIN_DECLARATION = DeclarationSpecification(
+    name="mixin",
     allowed_scopes=frozenset({Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR}),
     allowed_modifiers=frozenset(
         {"prepend", "layer", "for", "fx", "when", "unless"}
@@ -44,6 +44,6 @@ CODE_DECLARATION = DeclarationSpecification(
 
 DECLARATIONS: dict[str, DeclarationSpecification] = {
     TEMPLATE_DECLARATION.name: TEMPLATE_DECLARATION,
-    PATCH_DECLARATION.name: PATCH_DECLARATION,
+    MIXIN_DECLARATION.name: MIXIN_DECLARATION,
     CODE_DECLARATION.name: CODE_DECLARATION,
 }

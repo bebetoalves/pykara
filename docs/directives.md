@@ -9,14 +9,14 @@ scope; the `Text` field carries the directive body.
 | Directive | Scopes | Description |
 |--------------------|-------------------------------|----------------------------------------|
 | `template <scope>` | `line`, `word`, `syl`, `char` | Generate effect lines from a template. |
-| `patch <scope>` | `line`, `word`, `syl`, `char` | Inject tags into matching template output. |
+| `mixin <scope>` | `line`, `word`, `syl`, `char` | Inject tags into matching template output. |
 | `code <scope>` | `setup`, `line`, `word`, `syl` | Run Python code in the current scope. |
 
 ## Documentation
 
 ### Core Concepts
 
-- **[Directive Types](./directives/types.md)** — `template`, `patch`, and `code`.
+- **[Directive Types](./directives/types.md)** — `template`, `mixin`, and `code`.
 - **[Scopes](./directives/scopes.md)** — execution frequency and scope rules.
 - **[Variables](./directives/variables.md)** — every `$variable` exposed to templates.
 - **[Objects](./directives/objects.md)** — object-style access inside `!expr!`.

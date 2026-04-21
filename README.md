@@ -34,7 +34,7 @@ Optional flags:
 ```sh
 pykara input.ass output.ass --json output.json   # Export intermediate data
 pykara input.ass output.ass --warn-only          # Downgrade errors to warnings
-pykara input.ass output.ass --seed 42            # Deterministic output
+pykara input.ass output.ass --seed 42            # Initial deterministic RNG seed
 pykara input.ass output.ass --font-dir ./fonts   # Prefer fonts from a directory
 ```
 

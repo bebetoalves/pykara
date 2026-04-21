@@ -10,8 +10,8 @@ from pykara.specification import (
     EXPRESSION_OBJECT_SPECIFICATIONS,
     EXPRESSION_PROPERTY_SPECIFICATIONS,
     FUNCTION_SPECIFICATIONS,
+    MIXIN_DECLARATION,
     MODIFIER_SPECIFICATIONS,
-    PATCH_DECLARATION,
     SCOPE_SPECIFICATIONS,
     TEMPLATE_DECLARATION,
     VARIABLE_SPECIFICATIONS,
@@ -244,7 +244,7 @@ class TestDeclarations:
     def test_registry_contains_expected_declarations(self) -> None:
         assert DECLARATIONS == {
             "template": TEMPLATE_DECLARATION,
-            "patch": PATCH_DECLARATION,
+            "mixin": MIXIN_DECLARATION,
             "code": CODE_DECLARATION,
         }
 
@@ -258,8 +258,8 @@ class TestDeclarations:
             {Scope.SETUP, Scope.LINE, Scope.WORD, Scope.SYL}
         )
 
-    def test_patch_scopes_match_contract(self) -> None:
-        assert PATCH_DECLARATION.allowed_scopes == frozenset(
+    def test_mixin_scopes_match_contract(self) -> None:
+        assert MIXIN_DECLARATION.allowed_scopes == frozenset(
             {Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR}
         )
 

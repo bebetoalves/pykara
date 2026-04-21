@@ -10,7 +10,7 @@ from pykara.adapters.output.json_adapter import JsonWriter
 from pykara.adapters.output.sub_station_alpha import SubStationAlphaWriter
 from pykara.data import Event
 from pykara.declaration.code import CODE_MODIFIER_REGISTRY
-from pykara.declaration.patch import PATCH_MODIFIER_REGISTRY
+from pykara.declaration.mixin import MIXIN_MODIFIER_REGISTRY
 from pykara.declaration.template import TEMPLATE_MODIFIER_REGISTRY
 from pykara.engine import Engine
 from pykara.parsing import DeclarationParser, ParsedDeclarations
@@ -56,7 +56,7 @@ def load_declarations(document: SubtitleDocument) -> ParsedDeclarations:
 
     return DeclarationParser(
         template_mod_registry=TEMPLATE_MODIFIER_REGISTRY,
-        patch_mod_registry=PATCH_MODIFIER_REGISTRY,
+        mixin_mod_registry=MIXIN_MODIFIER_REGISTRY,
         code_mod_registry=CODE_MODIFIER_REGISTRY,
     ).parse(document.events)
 

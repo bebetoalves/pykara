@@ -29,8 +29,8 @@ from pykara.errors import (
 )
 from pykara.parsing import (
     CodeDeclaration,
+    MixinDeclaration,
     ParsedDeclarations,
-    PatchDeclaration,
     TemplateDeclaration,
 )
 from pykara.parsing.karaoke_parser import KaraokeParser
@@ -127,7 +127,12 @@ class _CodeRunner:
 
     def run(self, source: str, env: Environment) -> None:
         try:
-            self._validate_reserved_assignments(source, env.reserved_names())
+            assigned_names = self._assigned_names(source)
+            self._validate_reserved_assignments(
+                assigned_names,
+                source,
+                env.reserved_names(),
+            )
             compiled = self._compiled_code_cache.get(source)
             if compiled is None:
                 compiled = compile(source, "<pykara-code>", "exec")
@@ -140,6 +145,12 @@ class _CodeRunner:
         namespace["__builtins__"] = {}
         try:
             exec(compiled, namespace, namespace)  # noqa: S102
+            if "_seed" in assigned_names:
+                seed_value = cast(
+                    int | float | str | bytes | bytearray | None,
+                    namespace["_seed"],
+                )
+                env.rng.seed(seed_value)
         except BoundMethodInExpressionError:
             raise
         except Exception as error:  # pragma: no cover - exercised in tests
@@ -159,9 +170,14 @@ class _CodeRunner:
 
     def _validate_reserved_assignments(
         self,
+        assigned_names: frozenset[str],
         source: str,
         reserved_names: frozenset[str],
     ) -> None:
+        for name in sorted(assigned_names & reserved_names):
+            raise ReservedNameError(name, source)
+
+    def _assigned_names(self, source: str) -> frozenset[str]:
         assigned_names = self._assigned_name_cache.get(source)
         if assigned_names is None:
             try:
@@ -172,9 +188,7 @@ class _CodeRunner:
             collector.visit(tree)
             assigned_names = frozenset(collector.names)
             self._assigned_name_cache[source] = assigned_names
-
-        for name in sorted(assigned_names & reserved_names):
-            raise ReservedNameError(name, source)
+        return assigned_names
 
 
 class Engine:
@@ -905,7 +919,7 @@ class Engine:
         return self._build_scoped_event(
             declaration=declaration,
             source_event=source_event,
-            patches=declarations.patch_line,
+            mixins=declarations.mixin_line,
             styleref=styleref,
             suffix_text=self._strip_karaoke_text(source_event.text),
             env=env,
@@ -922,7 +936,7 @@ class Engine:
         return self._build_scoped_event(
             declaration=declaration,
             source_event=source_event,
-            patches=declarations.patch_syl,
+            mixins=declarations.mixin_syl,
             styleref=syllable.style or env.styles[source_event.style],
             suffix_text=syllable.text,
             env=env,
@@ -939,7 +953,7 @@ class Engine:
         return self._build_scoped_event(
             declaration=declaration,
             source_event=source_event,
-            patches=declarations.patch_word,
+            mixins=declarations.mixin_word,
             styleref=word.style or env.styles[source_event.style],
             suffix_text=word.text,
             env=env,
@@ -956,7 +970,7 @@ class Engine:
         return self._build_scoped_event(
             declaration=declaration,
             source_event=source_event,
-            patches=declarations.patch_char,
+            mixins=declarations.mixin_char,
             styleref=char_syllable.style or env.styles[source_event.style],
             suffix_text=char_syllable.text,
             env=env,
@@ -967,7 +981,7 @@ class Engine:
         *,
         declaration: TemplateDeclaration,
         source_event: Event,
-        patches: list[PatchDeclaration],
+        mixins: list[MixinDeclaration],
         styleref: Style,
         suffix_text: str,
         env: Environment,
@@ -986,17 +1000,17 @@ class Engine:
         )
         with self._apply_template_modifier_context(declaration, env):
             template_text = self._renderer.render(declaration.body.text, env)
-            prepend_text = self._render_patch_text(
+            prepend_text = self._render_mixin_text(
                 template=declaration,
                 source_event=source_event,
-                patches=patches,
+                mixins=mixins,
                 env=env,
                 prepend=True,
             )
-            injected_text = self._render_patch_text(
+            injected_text = self._render_mixin_text(
                 template=declaration,
                 source_event=source_event,
-                patches=patches,
+                mixins=mixins,
                 env=env,
                 prepend=False,
             )
@@ -1049,9 +1063,9 @@ class Engine:
             *declarations.word,
             *declarations.syl,
             *declarations.char,
-            *declarations.patch_word,
-            *declarations.patch_syl,
-            *declarations.patch_char,
+            *declarations.mixin_word,
+            *declarations.mixin_syl,
+            *declarations.mixin_char,
         ]
         return self._declarations_reference_loops(
             descendants,
@@ -1066,8 +1080,8 @@ class Engine:
         descendants = [
             *declarations.syl,
             *declarations.char,
-            *declarations.patch_syl,
-            *declarations.patch_char,
+            *declarations.mixin_syl,
+            *declarations.mixin_char,
         ]
         return self._declarations_reference_loops(
             descendants,
@@ -1081,7 +1095,7 @@ class Engine:
     ) -> bool:
         descendants = [
             *declarations.char,
-            *declarations.patch_char,
+            *declarations.mixin_char,
         ]
         return self._declarations_reference_loops(
             descendants,
@@ -1091,13 +1105,13 @@ class Engine:
     def _declarations_reference_loops(
         self,
         declarations: Sequence[
-            TemplateDeclaration | CodeDeclaration | PatchDeclaration
+            TemplateDeclaration | CodeDeclaration | MixinDeclaration
         ],
         loops: tuple[LoopDescriptor, ...],
     ) -> bool:
         loop_variable_names = self._loop_variable_names(loops)
         return any(
-            isinstance(declaration, (TemplateDeclaration, PatchDeclaration))
+            isinstance(declaration, (TemplateDeclaration, MixinDeclaration))
             and bool(
                 self._template_variable_names(declaration) & loop_variable_names
             )
@@ -1118,7 +1132,7 @@ class Engine:
 
     def _template_variable_names(
         self,
-        declaration: TemplateDeclaration | PatchDeclaration,
+        declaration: TemplateDeclaration | MixinDeclaration,
     ) -> frozenset[str]:
         variable_names = set(
             _TEMPLATE_VARIABLE_PATTERN.findall(declaration.body.text)
@@ -1137,72 +1151,72 @@ class Engine:
             )
         return frozenset(variable_names)
 
-    def _render_patch_text(
+    def _render_mixin_text(
         self,
         *,
         template: TemplateDeclaration,
         source_event: Event,
-        patches: list[PatchDeclaration],
+        mixins: list[MixinDeclaration],
         env: Environment,
         prepend: bool,
     ) -> str:
         rendered: list[str] = []
-        for patch in patches:
-            if patch.modifiers.prepend is not prepend:
+        for mixin in mixins:
+            if mixin.modifiers.prepend is not prepend:
                 continue
-            if not self._patch_applies_to_template(
-                patch=patch,
+            if not self._mixin_applies_to_template(
+                mixin=mixin,
                 template=template,
                 source_event=source_event,
                 env=env,
             ):
                 continue
-            rendered.append(self._renderer.render(patch.body.text, env))
+            rendered.append(self._renderer.render(mixin.body.text, env))
         return "".join(rendered)
 
-    def _patch_applies_to_template(
+    def _mixin_applies_to_template(
         self,
         *,
-        patch: PatchDeclaration,
+        mixin: MixinDeclaration,
         template: TemplateDeclaration,
         source_event: Event,
         env: Environment,
     ) -> bool:
-        if patch.scope is not template.scope:
+        if mixin.scope is not template.scope:
             return False
-        if not self._patch_applies_to_style(
-            patch=patch,
+        if not self._mixin_applies_to_style(
+            mixin=mixin,
             template=template,
             source_event=source_event,
         ):
             return False
         if (
-            patch.modifiers.for_actor is not None
-            and patch.modifiers.for_actor != template.actor
+            mixin.modifiers.for_actor is not None
+            and mixin.modifiers.for_actor != template.actor
         ):
             return False
-        if patch.modifiers.layer is not None:
-            if env.line is None or env.line.layer != patch.modifiers.layer:
+        if mixin.modifiers.layer is not None:
+            if env.line is None or env.line.layer != mixin.modifiers.layer:
                 return False
-        if patch.modifiers.fx is not None:
-            if env.syl is None or env.syl.inline_fx != patch.modifiers.fx:
+        if mixin.modifiers.fx is not None:
+            if env.syl is None or env.syl.inline_fx != mixin.modifiers.fx:
                 return False
-        if not self._passes_patch_conditions(patch, env):
+        if not self._passes_mixin_conditions(mixin, env):
             return False
         return True
 
-    def _patch_applies_to_style(
+    def _mixin_applies_to_style(
         self,
         *,
-        patch: PatchDeclaration,
+        mixin: MixinDeclaration,
         template: TemplateDeclaration,
         source_event: Event,
     ) -> bool:
         if self._declaration_reference_styles_token(template) is None:
-            return self._declaration_applies_to_style(patch, source_event)
+            return self._declaration_applies_to_style(mixin, source_event)
         if template.style:
-            return not patch.style or patch.style == template.style
-        return not patch.style or patch.style == source_event.style
+            return not mixin.style or mixin.style == template.style
+        return not mixin.style or mixin.style == source_event.style
 
     def _passes_conditions(
         self,
@@ -1226,9 +1240,9 @@ class Engine:
                 return False
         return True
 
-    def _passes_patch_conditions(
+    def _passes_mixin_conditions(
         self,
-        declaration: PatchDeclaration,
+        declaration: MixinDeclaration,
         env: Environment,
     ) -> bool:
         if declaration.modifiers.when is not None and not bool(
@@ -1261,11 +1275,11 @@ class Engine:
 
     def _declaration_applies_to_style(
         self,
-        declaration: TemplateDeclaration | CodeDeclaration | PatchDeclaration,
+        declaration: TemplateDeclaration | CodeDeclaration | MixinDeclaration,
         event: Event,
     ) -> bool:
         if (
-            not isinstance(declaration, PatchDeclaration)
+            not isinstance(declaration, MixinDeclaration)
             and self._declaration_reference_styles_token(declaration)
             is not None
         ):
