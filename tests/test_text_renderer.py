@@ -104,11 +104,12 @@ class TestTextRenderer:
         env = make_env()
 
         rendered = renderer.render(
-            "!style.primary_color!-!style.shadow_color!-!style.outline!",
+            "!style.name!-!style.primary_color!-!style.shadow_color!-"
+            "!style.outline!",
             env,
         )
 
-        assert rendered == "&H00FFFFFF-&H00000000-2.0"
+        assert rendered == "Default-&H00FFFFFF-&H00000000-2.0"
 
     def test_exposes_source_and_text_views_in_expressions(self) -> None:
         renderer = TextRenderer()

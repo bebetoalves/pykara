@@ -227,6 +227,7 @@ class TestExpressionStyleObject:
         env = make_populated_environment()
         style_object = _ExpressionStyleObject(env)
 
+        assert style_object.name == "Default"
         assert style_object.primary_color == "&H00FFFFFF"
         assert style_object.secondary_color == "&H0000FFFF"
         assert style_object.outline_color == "&H00112233"
