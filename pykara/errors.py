@@ -167,6 +167,18 @@ class TemplateRuntimeError(EngineError):
         super().__init__(f"Runtime error in template: {cause}")
 
 
+class UnknownStyleReferenceError(EngineError):
+    """Raised when a styles modifier references a style that does not exist."""
+
+    def __init__(self, style_name: str, source: str) -> None:
+        self.style_name = style_name
+        self.source = source
+        super().__init__(
+            "Styles modifier "
+            f"{source!r} references unknown style {style_name!r}"
+        )
+
+
 class ReservedNameError(EngineError):
     """Raised when code tries to bind a name reserved by Pykara."""
 

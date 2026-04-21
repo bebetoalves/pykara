@@ -6,6 +6,7 @@ import pytest
 
 from pykara.data import Event
 from pykara.declaration import Scope
+from pykara.declaration.code import CODE_MODIFIER_REGISTRY
 from pykara.declaration.patch import PATCH_MODIFIER_REGISTRY
 from pykara.declaration.template import TEMPLATE_MODIFIER_REGISTRY
 from pykara.errors import DeclarativeParseError
@@ -47,6 +48,7 @@ class TestDeclarationParser:
         return DeclarationParser(
             template_mod_registry=TEMPLATE_MODIFIER_REGISTRY,
             patch_mod_registry=PATCH_MODIFIER_REGISTRY,
+            code_mod_registry=CODE_MODIFIER_REGISTRY,
         )
 
     def test_parse_returns_grouped_declarations(self) -> None:
@@ -60,7 +62,10 @@ class TestDeclarationParser:
                     style="StyleA",
                 ),
                 make_event(
-                    effect="template syl fx flash unless group_blue",
+                    effect=(
+                        "template syl fx flash styles my_styles "
+                        "unless group_blue"
+                    ),
                     text="syl body",
                     style="StyleB",
                 ),
@@ -81,7 +86,7 @@ class TestDeclarationParser:
                     style="StyleSetup",
                 ),
                 make_event(
-                    effect="code syl",
+                    effect="code syl styles my_styles",
                     text="counter += 1",
                     style="StyleCode",
                 ),
@@ -122,6 +127,7 @@ class TestDeclarationParser:
         assert isinstance(syl_template, TemplateDeclaration)
         assert syl_template.scope is Scope.SYL
         assert syl_template.modifiers.fx == "flash"
+        assert syl_template.modifiers.styles == "my_styles"
         assert syl_template.modifiers.unless == "group_blue"
 
         assert isinstance(char_declaration, TemplateDeclaration)
@@ -144,6 +150,7 @@ class TestDeclarationParser:
 
         assert isinstance(syl_code, CodeDeclaration)
         assert syl_code.scope is Scope.SYL
+        assert syl_code.modifiers.styles == "my_styles"
         assert syl_code.body.source == "counter += 1"
 
     def test_parse_supports_multiple_named_loops(self) -> None:

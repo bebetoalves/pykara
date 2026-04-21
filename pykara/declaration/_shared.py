@@ -84,3 +84,17 @@ def consume_condition_expression(
         modifier,
         f"expected closing ')' in expression after {modifier!r}",
     )
+
+
+def consume_required_argument(
+    modifier: str,
+    remaining: list[str],
+) -> tuple[str, list[str]]:
+    """Consume one required plain argument after a modifier."""
+
+    if not remaining:
+        raise ModifierParseError(
+            modifier,
+            f"expected name after {modifier!r}",
+        )
+    return remaining[0], remaining[1:]

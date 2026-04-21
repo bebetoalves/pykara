@@ -538,6 +538,8 @@ class _ExpressionStyleObject:
         return self._style().outline
 
     def _style(self) -> Style:
+        if self._env.reference_style is not None:
+            return self._env.reference_style
         if self._env.line is not None:
             return self._env.line.styleref
         if self._env.source_line is not None:
@@ -749,8 +751,7 @@ class _ExpressionLineObject:
         else:
             _raise_unavailable_attribute("syls")
         return tuple(
-            _ExpressionKaraokeSyllableObject(syllable)
-            for syllable in syllables
+            _ExpressionKaraokeSyllableObject(syllable) for syllable in syllables
         )
 
     def _required_int(self, name: str, value: int | None) -> int:
@@ -1063,6 +1064,7 @@ class Environment:
     source_line: Event | None = None
     karaoke: Karaoke | None = None
     line: GeneratedLine | None = None
+    reference_style: Style | None = None
     word: Word | None = None
     syl: Syllable | None = None
     char: Syllable | None = None
@@ -1183,7 +1185,9 @@ class Environment:
         namespace: dict[str, object] = {"palette": palette}
         if self.vars.line_start is not None:
             namespace["line"] = self._expression_object("line")
+        if self.vars.line_start is not None or self.reference_style is not None:
             namespace["style"] = self._expression_object("style")
+        if self.vars.line_start is not None:
             if self.metadata is not None:
                 namespace["metadata"] = self._expression_object("metadata")
         if self.vars.word_start is not None:

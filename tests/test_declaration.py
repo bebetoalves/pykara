@@ -7,7 +7,7 @@ from dataclasses import FrozenInstanceError, replace
 import pytest
 
 from pykara.declaration._shared import ModifierRegistry
-from pykara.declaration.code import CodeBody
+from pykara.declaration.code import CodeBody, CodeModifiers, CodeStylesModifier
 from pykara.declaration.template import (
     TEMPLATE_MODIFIER_REGISTRY,
     FxModifier,
@@ -15,6 +15,7 @@ from pykara.declaration.template import (
     LoopModifier,
     NoBlankModifier,
     NoTextModifier,
+    StylesModifier,
     TemplateBody,
     TemplateModifiers,
     UnlessModifier,
@@ -152,6 +153,40 @@ class TestFxModifier:
         assert exc_info.value.modifier == "fx"
 
 
+class TestStylesModifier:
+    def test_parses_styles_name_and_consumes_token(self) -> None:
+        modifier = StylesModifier()
+        current = TemplateModifiers()
+
+        result, remaining = modifier.apply(["my_styles", "no_text"], current)
+
+        assert result == replace(current, styles="my_styles")
+        assert remaining == ["no_text"]
+
+    def test_raises_without_argument(self) -> None:
+        with pytest.raises(ModifierParseError) as exc_info:
+            StylesModifier().apply([], TemplateModifiers())
+
+        assert exc_info.value.modifier == "styles"
+
+
+class TestCodeStylesModifier:
+    def test_parses_styles_name_and_consumes_token(self) -> None:
+        modifier = CodeStylesModifier()
+        current = CodeModifiers()
+
+        result, remaining = modifier.apply(["my_styles", "other"], current)
+
+        assert result == replace(current, styles="my_styles")
+        assert remaining == ["other"]
+
+    def test_raises_without_argument(self) -> None:
+        with pytest.raises(ModifierParseError) as exc_info:
+            CodeStylesModifier().apply([], CodeModifiers())
+
+        assert exc_info.value.modifier == "styles"
+
+
 class TestWhenModifier:
     def test_parses_single_token_condition(self) -> None:
         modifier = WhenModifier()
@@ -223,6 +258,7 @@ class TestModifierRegistry:
         registry.register(NoBlankModifier())
         registry.register(NoTextModifier())
         registry.register(FxModifier())
+        registry.register(StylesModifier())
         registry.register(WhenModifier())
         registry.register(UnlessModifier())
         return registry
@@ -253,6 +289,8 @@ class TestModifierRegistry:
                 "no_text",
                 "fx",
                 "flash",
+                "styles",
+                "my_styles",
                 "when",
                 "(line.actor",
                 "==",
@@ -267,6 +305,7 @@ class TestModifierRegistry:
             no_blank=True,
             no_text=True,
             fx="flash",
+            styles="my_styles",
             when='(line.actor == "red")',
             unless="group_blue",
         )

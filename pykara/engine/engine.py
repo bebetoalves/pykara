@@ -9,6 +9,7 @@ from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import replace
 from types import CodeType
+from typing import cast
 
 from pykara.data import Event, Metadata, Style
 from pykara.data.events.karaoke import Karaoke, Syllable, Word
@@ -24,6 +25,7 @@ from pykara.errors import (
     ReservedNameError,
     TemplateCodeError,
     TemplateRuntimeError,
+    UnknownStyleReferenceError,
 )
 from pykara.parsing import (
     CodeDeclaration,
@@ -215,30 +217,37 @@ class Engine:
             rng=random.Random(self._rng_seed),  # noqa: S311
         )
         for declaration in declarations.setup:
-            self._execute_code(declaration, env)
+            self._execute_setup_code(declaration, env)
+        env.reference_style = None
 
         output_events: list[Event] = []
         karaoke_index = 0
         for event in events:
             if not self._is_karaoke_event(event):
                 continue
-            style = styles[event.style]
             karaoke = self._karaoke_parser.parse(event)
-            positioned = self._preprocessor.preprocess(
+            for reference_style_name in self._reference_style_names_for_event(
+                declarations,
                 event,
-                karaoke,
-                meta,
-                style,
-            )
-            line_output = self._apply_line(
-                event=event,
-                line_index=karaoke_index,
-                positioned=positioned,
-                declarations=declarations,
-                karaoke=karaoke,
-                env=env,
-            )
-            output_events.extend(line_output)
+                env,
+            ):
+                reference_style = styles[reference_style_name]
+                positioned = self._preprocessor.preprocess(
+                    event,
+                    karaoke,
+                    meta,
+                    reference_style,
+                )
+                line_output = self._apply_line(
+                    event=event,
+                    line_index=karaoke_index,
+                    positioned=positioned,
+                    declarations=declarations,
+                    karaoke=karaoke,
+                    env=env,
+                    reference_style=reference_style,
+                )
+                output_events.extend(line_output)
             karaoke_index += 1
 
         return output_events
@@ -252,10 +261,12 @@ class Engine:
         declarations: ParsedDeclarations,
         karaoke: Karaoke,
         env: Environment,
+        reference_style: Style,
     ) -> list[Event]:
         env.source_line = event
         env.karaoke = karaoke
         env.line = None
+        env.reference_style = reference_style
         env.word = None
         env.syl = None
         env.char = None
@@ -294,6 +305,13 @@ class Engine:
         for declaration in declarations.line:
             if not self._declaration_applies_to_style(declaration, event):
                 continue
+            if not self._declaration_applies_to_reference_style(
+                declaration,
+                event,
+                reference_style.name,
+                env,
+            ):
+                continue
             if isinstance(declaration, CodeDeclaration):
                 self._execute_code(declaration, env)
                 continue
@@ -324,6 +342,7 @@ class Engine:
                     event,
                     declarations,
                     env,
+                    reference_style,
                     descendants,
                 )
             )
@@ -343,6 +362,23 @@ class Engine:
         env.syl = None
         return output_events
 
+    def _execute_setup_code(
+        self,
+        declaration: CodeDeclaration,
+        env: Environment,
+    ) -> None:
+        styles_token = declaration.modifiers.styles
+        if styles_token is None:
+            self._execute_code(declaration, env)
+            return
+
+        for style_name in self._resolve_reference_style_names(
+            styles_token,
+            env,
+        ):
+            env.reference_style = env.styles[style_name]
+            self._execute_code(declaration, env)
+
     def _execute_code(
         self,
         declaration: CodeDeclaration,
@@ -358,6 +394,7 @@ class Engine:
         source_event: Event,
         declarations: ParsedDeclarations,
         env: Environment,
+        styleref: Style,
         descendants: Callable[[], list[Event]] | None,
     ) -> list[Event]:
         if (
@@ -373,6 +410,7 @@ class Engine:
                 source_event,
                 declarations,
                 env,
+                styleref,
             ),
             descendants,
         )
@@ -497,6 +535,12 @@ class Engine:
                         event,
                     ):
                         continue
+                    if not self._declaration_applies_to_current_reference_style(
+                        declaration,
+                        event,
+                        env,
+                    ):
+                        continue
                     if isinstance(declaration, CodeDeclaration):
                         self._execute_code(declaration, env)
                         continue
@@ -586,6 +630,12 @@ class Engine:
                     if not self._declaration_applies_to_style(
                         declaration,
                         event,
+                    ):
+                        continue
+                    if not self._declaration_applies_to_current_reference_style(
+                        declaration,
+                        event,
+                        env,
                     ):
                         continue
                     if isinstance(declaration, CodeDeclaration):
@@ -691,6 +741,12 @@ class Engine:
                     if not self._declaration_applies_to_style(
                         declaration,
                         event,
+                    ):
+                        continue
+                    if not self._declaration_applies_to_current_reference_style(
+                        declaration,
+                        event,
+                        env,
                     ):
                         continue
                     if not self._should_apply_template(
@@ -840,12 +896,13 @@ class Engine:
         source_event: Event,
         declarations: ParsedDeclarations,
         env: Environment,
+        styleref: Style,
     ) -> Event:
         return self._build_scoped_event(
             declaration=declaration,
             source_event=source_event,
             patches=declarations.patch_line,
-            styleref=env.styles[source_event.style],
+            styleref=styleref,
             suffix_text=self._strip_karaoke_text(source_event.text),
             env=env,
         )
@@ -1038,8 +1095,7 @@ class Engine:
         return any(
             isinstance(declaration, (TemplateDeclaration, PatchDeclaration))
             and bool(
-                self._template_variable_names(declaration)
-                & loop_variable_names
+                self._template_variable_names(declaration) & loop_variable_names
             )
             for declaration in declarations
         )
@@ -1188,6 +1244,111 @@ class Engine:
         event: Event,
     ) -> bool:
         return not declaration.style or declaration.style == event.style
+
+    def _declaration_applies_to_current_reference_style(
+        self,
+        declaration: TemplateDeclaration | CodeDeclaration,
+        event: Event,
+        env: Environment,
+    ) -> bool:
+        return self._declaration_applies_to_reference_style(
+            declaration,
+            event,
+            self._current_reference_style_name(event, env),
+            env,
+        )
+
+    def _current_reference_style_name(
+        self,
+        event: Event,
+        env: Environment,
+    ) -> str:
+        if env.reference_style is not None:
+            return env.reference_style.name
+        return event.style
+
+    def _declaration_applies_to_reference_style(
+        self,
+        declaration: TemplateDeclaration | CodeDeclaration,
+        event: Event,
+        reference_style_name: str,
+        env: Environment,
+    ) -> bool:
+        styles_token = self._declaration_reference_styles_token(declaration)
+        if styles_token is None:
+            return reference_style_name == event.style
+        return reference_style_name in self._resolve_reference_style_names(
+            styles_token,
+            env,
+        )
+
+    def _declaration_reference_styles_token(
+        self,
+        declaration: TemplateDeclaration | CodeDeclaration,
+    ) -> str | None:
+        if isinstance(declaration, TemplateDeclaration):
+            return declaration.modifiers.styles
+        return declaration.modifiers.styles
+
+    def _reference_style_names_for_event(
+        self,
+        declarations: ParsedDeclarations,
+        event: Event,
+        env: Environment,
+    ) -> tuple[str, ...]:
+        names: list[str] = []
+        for declaration in self._scoped_declarations(declarations):
+            if not self._declaration_applies_to_style(declaration, event):
+                continue
+            styles_token = self._declaration_reference_styles_token(declaration)
+            if styles_token is None:
+                style_names = (event.style,)
+            else:
+                style_names = self._resolve_reference_style_names(
+                    styles_token,
+                    env,
+                )
+            for style_name in style_names:
+                if style_name not in names:
+                    names.append(style_name)
+        return tuple(names)
+
+    def _scoped_declarations(
+        self,
+        declarations: ParsedDeclarations,
+    ) -> tuple[TemplateDeclaration | CodeDeclaration, ...]:
+        return (
+            *declarations.line,
+            *declarations.word,
+            *declarations.syl,
+            *declarations.char,
+        )
+
+    def _resolve_reference_style_names(
+        self,
+        styles_token: str,
+        env: Environment,
+    ) -> tuple[str, ...]:
+        value = env.user_namespace.get(styles_token)
+        if isinstance(value, tuple):
+            raw_style_names = cast(tuple[object, ...], value)
+        else:
+            error = TypeError(
+                "styles modifier must resolve to a tuple of style names"
+            )
+            raise TemplateRuntimeError(styles_token, error) from error
+
+        style_names: list[str] = []
+        for style_name in raw_style_names:
+            if not isinstance(style_name, str):
+                error = TypeError(
+                    "styles modifier tuple must contain only style names"
+                )
+                raise TemplateRuntimeError(styles_token, error) from error
+            if style_name not in env.styles:
+                raise UnknownStyleReferenceError(style_name, styles_token)
+            style_names.append(style_name)
+        return tuple(style_names)
 
     def _iter_char_syllables(
         self,

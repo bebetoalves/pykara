@@ -298,14 +298,22 @@ class TestModifiers:
         documented_tokens = documented_keywords | documented_aliases
 
         assert TEMPLATE_DECLARATION.allowed_modifiers <= documented_tokens
+        assert CODE_DECLARATION.allowed_modifiers <= documented_tokens
 
     def test_modifier_scopes_are_valid_for_each_declaration(self) -> None:
         for specification in MODIFIER_SPECIFICATIONS.values():
+            allowed_scopes = frozenset(
+                scope
+                for declaration_name in specification.applicable_to
+                for scope in DECLARATIONS[declaration_name].allowed_scopes
+            )
+            assert specification.allowed_scopes <= allowed_scopes
+
+    def test_modifier_scopes_overlap_each_applicable_declaration(self) -> None:
+        for specification in MODIFIER_SPECIFICATIONS.values():
             for declaration_name in specification.applicable_to:
                 declaration = DECLARATIONS[declaration_name]
-                assert (
-                    specification.allowed_scopes <= declaration.allowed_scopes
-                )
+                assert specification.allowed_scopes & declaration.allowed_scopes
 
 
 class TestVariables:

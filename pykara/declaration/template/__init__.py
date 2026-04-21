@@ -8,6 +8,7 @@ from pykara.declaration.template.modifiers import (
     LoopModifier,
     NoBlankModifier,
     NoTextModifier,
+    StylesModifier,
     TemplateModifiers,
     UnlessModifier,
     WhenModifier,
@@ -22,6 +23,7 @@ for _handler in (
     NoBlankModifier(),
     NoTextModifier(),
     FxModifier(),
+    StylesModifier(),
     WhenModifier(),
     UnlessModifier(),
 ):
@@ -34,6 +36,7 @@ __all__ = [
     "LoopModifier",
     "NoBlankModifier",
     "NoTextModifier",
+    "StylesModifier",
     "TemplateBody",
     "TemplateModifiers",
     "UnlessModifier",

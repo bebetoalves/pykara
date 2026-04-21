@@ -39,6 +39,8 @@ def _iter_active_modifiers(
         active_modifiers.append("no_text")
     if modifiers.fx is not None:
         active_modifiers.append("fx")
+    if modifiers.styles is not None:
+        active_modifiers.append("styles")
     if modifiers.when is not None:
         active_modifiers.append("when")
     if modifiers.unless is not None:

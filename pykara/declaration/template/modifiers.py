@@ -6,7 +6,10 @@ import re
 from dataclasses import dataclass, replace
 from typing import ClassVar
 
-from pykara.declaration._shared import consume_condition_expression
+from pykara.declaration._shared import (
+    consume_condition_expression,
+    consume_required_argument,
+)
 from pykara.errors import ModifierParseError
 
 _SNAKE_CASE_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -33,6 +36,7 @@ class TemplateModifiers:
     no_blank: bool = False
     no_text: bool = False
     fx: str | None = None
+    styles: str | None = None
     when: str | None = None
     unless: str | None = None
 
@@ -180,6 +184,24 @@ class FxModifier:
         if not remaining_tokens:
             raise ModifierParseError("fx", "expected name after 'fx'")
         return replace(current, fx=remaining_tokens[0]), remaining_tokens[1:]
+
+
+class StylesModifier:
+    """Parse the styles modifier."""
+
+    keyword: ClassVar[str] = "styles"
+    aliases: ClassVar[tuple[str, ...]] = ()
+
+    def apply(
+        self,
+        remaining_tokens: list[str],
+        current: TemplateModifiers,
+    ) -> tuple[TemplateModifiers, list[str]]:
+        styles_name, rest = consume_required_argument(
+            "styles",
+            remaining_tokens,
+        )
+        return replace(current, styles=styles_name), rest
 
 
 class WhenModifier:

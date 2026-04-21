@@ -322,9 +322,7 @@ class TestDocumentValidator:
                 super().__init__()
                 self.seen_comments: list[bool] = []
 
-            def _validate_event_karaoke(
-                self, event: Event
-            ) -> ValidationReport:
+            def _validate_event_karaoke(self, event: Event) -> ValidationReport:
                 self.seen_comments.append(event.comment)
                 return super()._validate_event_karaoke(event)
 

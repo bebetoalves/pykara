@@ -20,6 +20,9 @@ class ModifierSpecification:
 
 
 TEMPLATE_SCOPES = frozenset({Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR})
+STYLE_SCOPES = frozenset(
+    {Scope.SETUP, Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR}
+)
 
 
 MODIFIER_SPECIFICATIONS: dict[str, ModifierSpecification] = {
@@ -58,6 +61,14 @@ MODIFIER_SPECIFICATIONS: dict[str, ModifierSpecification] = {
         applicable_to=frozenset({"template", "patch"}),
         allowed_scopes=frozenset({Scope.SYL}),
         description="Filter by the requested inline-fx tag.",
+    ),
+    "styles": ModifierSpecification(
+        keyword="styles",
+        aliases=(),
+        takes_argument=True,
+        applicable_to=frozenset({"template", "code"}),
+        allowed_scopes=STYLE_SCOPES,
+        description="Use a tuple of styles as runtime reference styles.",
     ),
     "when": ModifierSpecification(
         keyword="when",

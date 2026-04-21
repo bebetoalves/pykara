@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pykara.data import Event
 from pykara.declaration import Scope
 from pykara.declaration._shared import ModifierRegistry
-from pykara.declaration.code import CodeBody
+from pykara.declaration.code import CodeBody, CodeModifiers
 from pykara.declaration.patch import PatchBody, PatchModifiers
 from pykara.declaration.template import TemplateBody, TemplateModifiers
 from pykara.errors import (
@@ -56,6 +56,7 @@ class CodeDeclaration:
 
     body: CodeBody
     scope: Scope
+    modifiers: CodeModifiers = field(default_factory=CodeModifiers)
     style: str = ""
 
 
@@ -111,9 +112,11 @@ class DeclarationParser:
         self,
         template_mod_registry: ModifierRegistry[TemplateModifiers],
         patch_mod_registry: ModifierRegistry[PatchModifiers],
+        code_mod_registry: ModifierRegistry[CodeModifiers],
     ) -> None:
         self._template_mod_registry = template_mod_registry
         self._patch_mod_registry = patch_mod_registry
+        self._code_mod_registry = code_mod_registry
 
     def parse(self, events: list[Event]) -> ParsedDeclarations:
         """Parse template and code declarations from commented events.
@@ -211,16 +214,15 @@ class DeclarationParser:
                 actor=event.actor,
             )
 
-        if remaining_tokens:
-            unexpected = remaining_tokens[0]
-            raise DeclarativeParseError(
-                effect_field=event.effect,
-                message=(f"Unexpected token after code scope: {unexpected!r}"),
-            )
+        modifiers = self._parse_code_modifiers(
+            effect_field=event.effect,
+            tokens=remaining_tokens,
+        )
 
         return CodeDeclaration(
             body=CodeBody(event.text),
             scope=scope,
+            modifiers=modifiers,
             style=declaration_style,
         )
 
@@ -316,6 +318,24 @@ class DeclarationParser:
                 effect_field=effect_field,
                 message=(
                     f"Unexpected token after patch scope: {error.modifier!r}"
+                ),
+            ) from error
+
+    def _parse_code_modifiers(
+        self,
+        *,
+        effect_field: str,
+        tokens: list[str],
+    ) -> CodeModifiers:
+        """Parse code modifiers through the injected registry."""
+
+        try:
+            return self._code_mod_registry.parse(tokens)
+        except UnknownModifierError as error:
+            raise DeclarativeParseError(
+                effect_field=effect_field,
+                message=(
+                    f"Unexpected token after code scope: {error.modifier!r}"
                 ),
             ) from error
 

@@ -13,7 +13,7 @@ import pytest
 
 from pykara.data import Event, Metadata, Style
 from pykara.declaration import Scope
-from pykara.declaration.code import CodeBody
+from pykara.declaration.code import CodeBody, CodeModifiers
 from pykara.declaration.patch import PatchBody, PatchModifiers
 from pykara.declaration.template import (
     LoopDescriptor,
@@ -27,6 +27,7 @@ from pykara.errors import (
     ReservedNameError,
     TemplateCodeError,
     TemplateRuntimeError,
+    UnknownStyleReferenceError,
     UnknownVariableError,
 )
 from pykara.parsing import (
@@ -69,9 +70,22 @@ class CountingExtentsProvider:
         )
 
 
-def make_style() -> Style:
+@dataclass(slots=True)
+class StyleAwareExtentsProvider:
+    widths: dict[tuple[str, str], float]
+
+    def measure(self, style: Style, text: str) -> TextMeasurement:
+        return TextMeasurement(
+            width=self.widths.get((style.name, text), float(len(text) * 10)),
+            height=20.0,
+            descent=4.0,
+            extlead=0.0,
+        )
+
+
+def make_style(name: str = "Default") -> Style:
     return Style(
-        name="Default",
+        name=name,
         fontname="Arial",
         fontsize=40.0,
         primary_colour="&H00FFFFFF",
@@ -274,6 +288,242 @@ class TestCodeRunner:
 
 
 class TestEngineIntegration:
+    def test_template_styles_modifier_uses_reference_style_metrics(
+        self,
+    ) -> None:
+        engine = Engine(
+            LinePreprocessor(
+                StyleAwareExtentsProvider(
+                    {
+                        ("Default", "goal"): 40.0,
+                        ("Alt", "goal"): 80.0,
+                    }
+                )
+            ),
+            rng_seed=1,
+        )
+        event = make_event()
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody('my_styles = ("Alt",)'),
+                    scope=Scope.SETUP,
+                )
+            ],
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("!style.name!:$line_width"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(
+                        styles="my_styles",
+                        no_text=True,
+                    ),
+                )
+            ],
+        )
+
+        results = engine.apply(
+            [event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {
+                "Default": make_style(),
+                "Alt": make_style("Alt"),
+            },
+        )
+
+        assert [(result.style, result.text) for result in results] == [
+            ("Alt", "Alt:80")
+        ]
+
+    def test_styles_modifier_accepts_tuple_from_setup_code(self) -> None:
+        engine = Engine(
+            LinePreprocessor(
+                StyleAwareExtentsProvider(
+                    {
+                        ("A", "goal"): 20.0,
+                        ("B", "goal"): 60.0,
+                    }
+                )
+            ),
+            rng_seed=1,
+        )
+        event = make_event()
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody('my_styles = ("A", "B")'),
+                    scope=Scope.SETUP,
+                )
+            ],
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("!style.name!:$line_width"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(
+                        styles="my_styles",
+                        no_text=True,
+                    ),
+                )
+            ],
+        )
+
+        results = engine.apply(
+            [event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {
+                "Default": make_style(),
+                "A": make_style("A"),
+                "B": make_style("B"),
+            },
+        )
+
+        assert [(result.style, result.text) for result in results] == [
+            ("A", "A:20"),
+            ("B", "B:60"),
+        ]
+
+    def test_code_styles_modifier_uses_reference_style_context(self) -> None:
+        engine = Engine(
+            LinePreprocessor(
+                StyleAwareExtentsProvider(
+                    {
+                        ("A", "goal"): 20.0,
+                        ("B", "goal"): 60.0,
+                    }
+                )
+            ),
+            rng_seed=1,
+        )
+        event = make_event()
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody('my_styles = ("A", "B")'),
+                    scope=Scope.SETUP,
+                )
+            ],
+            line=[
+                CodeDeclaration(
+                    body=CodeBody('current = f"{style.name}:{line.width}"'),
+                    scope=Scope.LINE,
+                    modifiers=CodeModifiers(styles="my_styles"),
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("!current!"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(
+                        styles="my_styles",
+                        no_text=True,
+                    ),
+                ),
+            ],
+        )
+
+        results = engine.apply(
+            [event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {
+                "Default": make_style(),
+                "A": make_style("A"),
+                "B": make_style("B"),
+            },
+        )
+
+        assert [result.text for result in results] == ["A:20", "B:60"]
+
+    def test_setup_code_styles_modifier_runs_for_each_reference_style(
+        self,
+    ) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody('my_styles = ("A", "B")'),
+                    scope=Scope.SETUP,
+                ),
+                CodeDeclaration(
+                    body=CodeBody("seen = []"),
+                    scope=Scope.SETUP,
+                ),
+                CodeDeclaration(
+                    body=CodeBody("seen.append(style.name)"),
+                    scope=Scope.SETUP,
+                    modifiers=CodeModifiers(styles="my_styles"),
+                ),
+            ],
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("!','.join(seen)!"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(no_text=True),
+                )
+            ],
+        )
+
+        results = engine.apply(
+            [make_event()],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {
+                "Default": make_style(),
+                "A": make_style("A"),
+                "B": make_style("B"),
+            },
+        )
+
+        assert [result.text for result in results] == ["A,B"]
+
+    def test_styles_modifier_rejects_single_style_name(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("body"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(styles="Default"),
+                )
+            ]
+        )
+
+        with pytest.raises(TemplateRuntimeError):
+            engine.apply(
+                [make_event()],
+                declarations,
+                Metadata(res_x=1920, res_y=1080),
+                {"Default": make_style()},
+            )
+
+    def test_styles_modifier_raises_pykara_error_for_missing_style(
+        self,
+    ) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody('my_styles = ("Missing",)'),
+                    scope=Scope.SETUP,
+                )
+            ],
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("body"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(styles="my_styles"),
+                )
+            ],
+        )
+
+        with pytest.raises(UnknownStyleReferenceError):
+            engine.apply(
+                [make_event()],
+                declarations,
+                Metadata(res_x=1920, res_y=1080),
+                {"Default": make_style()},
+            )
+
     def test_patch_injects_tags_before_matching_syllable_text(self) -> None:
         engine = build_engine()
         event = make_event()
@@ -1251,7 +1501,9 @@ class TestEngineIntegration:
         declarations = ParsedDeclarations(
             syl=[
                 TemplateDeclaration(
-                    body=TemplateBody("$syl_i/$syl_n:$syl_center:!line.syls[$syl_i].center!"),
+                    body=TemplateBody(
+                        "$syl_i/$syl_n:$syl_center:!line.syls[$syl_i].center!"
+                    ),
                     scope=Scope.SYL,
                     modifiers=TemplateModifiers(no_blank=True),
                 )

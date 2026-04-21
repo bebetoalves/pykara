@@ -18,6 +18,7 @@ template syl loop 3 no_blank
 | `layer` | `patch` | integer | `line`, `word`, `syl`, `char` | Match templates that set this output layer. |
 | `for` | `patch` | actor name | `line`, `word`, `syl`, `char` | Match templates with this actor. |
 | `fx` | `template`, `patch` | yes | `syl` | Match only syllables with the given inline-fx tag. |
+| `styles` | `template`, `code` | tuple variable | `setup`, `line`, `word`, `syl`, `char` | Use multiple runtime reference styles. |
 | `when` | `template`, `patch` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is truthy. |
 | `unless` | `template`, `patch` | yes | `line`, `word`, `syl`, `char` | Run only if the expression is falsy. |
 
@@ -51,6 +52,25 @@ template syl fx glow
 ```
 
 Match only syllables tagged with the given inline-fx name.
+
+## `styles`
+
+```ass
+template syl styles my_styles
+```
+
+```python
+my_styles = ("Romaji", "Kanji", "Translation")
+```
+
+Use multiple styles as reference styles while running a `template` or
+`code` declaration. Pykara measures line, word, syllable, and character
+positions with each reference style, exposes the active one through
+`style`, and uses it as the output event style.
+
+The argument must be a variable that resolves to a tuple of style names.
+The declaration runs once per listed style, in tuple order. A single
+literal style name is not accepted.
 
 ## `prepend`
 

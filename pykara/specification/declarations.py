@@ -21,7 +21,7 @@ TEMPLATE_DECLARATION = DeclarationSpecification(
     name="template",
     allowed_scopes=frozenset({Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR}),
     allowed_modifiers=frozenset(
-        {"loop", "no_blank", "no_text", "fx", "when", "unless"}
+        {"loop", "no_blank", "no_text", "fx", "styles", "when", "unless"}
     ),
     description="Generate effect lines from parameterized text.",
 )
@@ -38,7 +38,7 @@ PATCH_DECLARATION = DeclarationSpecification(
 CODE_DECLARATION = DeclarationSpecification(
     name="code",
     allowed_scopes=frozenset({Scope.SETUP, Scope.LINE, Scope.WORD, Scope.SYL}),
-    allowed_modifiers=frozenset(),
+    allowed_modifiers=frozenset({"styles"}),
     description="Execute Python code in the execution environment.",
 )
 
