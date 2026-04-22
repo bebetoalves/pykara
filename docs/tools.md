@@ -12,6 +12,6 @@ Tools are runtime helpers available inside template expressions
 | [`color`](./tools/color.md) | Build ASS colors, alpha values, and color blends. |
 | [`coord`](./tools/coord.md) | Round coordinates or calculate screen-space offsets. |
 | [`shape`](./tools/shape.md) | Move, rotate, center, or generate ASS drawing shapes. |
-| [`global`](./tools/global.md) | Share temporary values between templates and mixins. |
+| [`global`](./tools/global.md) | Call helper functions directly, without a namespace. |
 | [`math`](./tools/math.md) | Run numeric calculations inside `!expr!` and code. |
 | [`random`](./tools/random.md) | Add pseudo-random variation to generated lines. |
