@@ -43,6 +43,10 @@ def _empty_store() -> dict[str, object]:
     return {}
 
 
+def _empty_locked_store_keys() -> set[str]:
+    return set()
+
+
 def _empty_user_namespace() -> dict[str, object]:
     return {}
 
@@ -1078,6 +1082,9 @@ class Environment:
     retime_line_chars: tuple[Syllable, ...] = ()
     retime_syl_chars: tuple[Syllable, ...] = ()
     store: dict[str, object] = field(default_factory=_empty_store)
+    locked_store_keys: set[str] = field(
+        default_factory=_empty_locked_store_keys
+    )
     loop_stack: list[LoopState] = field(default_factory=_empty_loop_stack)
     rng: random.Random = field(default_factory=random.Random)
     user_namespace: dict[str, object] = field(

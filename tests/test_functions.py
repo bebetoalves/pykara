@@ -19,6 +19,7 @@ from pykara.engine.functions import (
     GetFunction,
     InterpolateColorFunction,
     LayerSetFunction,
+    LockFunction,
     PolarFunction,
     RetimeFunction,
     RoundCoordFunction,
@@ -28,7 +29,7 @@ from pykara.engine.functions import (
     ShapeRotateFunction,
     ShapeSplitClipFunction,
 )
-from pykara.errors import EngineError
+from pykara.errors import EngineError, LockedStoreKeyError
 
 
 @dataclass(slots=True)
@@ -101,6 +102,9 @@ class DummyEnvironment:
     retime_syl_chars: tuple[DummySyllable, ...] = ()
     styles: dict[str, Style] = field(default_factory=lambda: _empty_styles())
     store: dict[str, object] = field(default_factory=lambda: _empty_store())
+    locked_store_keys: set[str] = field(
+        default_factory=lambda: _empty_locked_store_keys()
+    )
 
 
 def _empty_styles() -> dict[str, Style]:
@@ -109,6 +113,10 @@ def _empty_styles() -> dict[str, Style]:
 
 def _empty_store() -> dict[str, object]:
     return {}
+
+
+def _empty_locked_store_keys() -> set[str]:
+    return set()
 
 
 def make_style(name: str = "Default") -> Style:
@@ -241,6 +249,42 @@ class TestStoreFunctions:
         assert result == "blue"
         assert env.store["color"] == "blue"
 
+    def test_lock_stores_locks_and_returns_value(self) -> None:
+        env = DummyEnvironment()
+
+        result = LockFunction()(env, "color", "blue")
+
+        assert result == "blue"
+        assert env.store["color"] == "blue"
+        assert env.locked_store_keys == {"color"}
+
+    def test_lock_keeps_first_locked_value(self) -> None:
+        env = DummyEnvironment()
+
+        first = LockFunction()(env, "color", "blue")
+        second = LockFunction()(env, "color", "red")
+
+        assert first == "blue"
+        assert second == "blue"
+        assert env.store["color"] == "blue"
+
+    def test_lock_can_lock_existing_store_value(self) -> None:
+        env = DummyEnvironment()
+        env.store["color"] = "blue"
+
+        result = LockFunction()(env, "color", "red")
+
+        assert result == "blue"
+        assert env.store["color"] == "blue"
+        assert env.locked_store_keys == {"color"}
+
+    def test_set_rejects_locked_key(self) -> None:
+        env = DummyEnvironment()
+        LockFunction()(env, "color", "blue")
+
+        with pytest.raises(LockedStoreKeyError):
+            SetFunction()(env, "color", "red")
+
 
 class TestColorFunctions:
     def test_ass_color_formats_ass_string(self) -> None:
@@ -358,6 +402,7 @@ class TestDefaultRegistry:
         assert isinstance(namespace["layer"], SimpleNamespace)
         assert "get" in namespace
         assert "set" in namespace
+        assert "lock" in namespace
         assert isinstance(namespace["color"], SimpleNamespace)
         assert isinstance(namespace["coord"], SimpleNamespace)
         assert isinstance(namespace["shape"], SimpleNamespace)
@@ -405,3 +450,4 @@ class TestDefaultRegistry:
 
         assert "get" not in namespace
         assert "set" not in namespace
+        assert "lock" not in namespace

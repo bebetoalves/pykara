@@ -49,6 +49,13 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
         "Store one value in the shared store.",
         frozenset({"template"}),
     ),
+    "lock": FunctionSpecification(
+        "lock",
+        "lock(key: str, value: object) -> object",
+        "engine",
+        "Store one value and prevent later changes to the key.",
+        frozenset({"template"}),
+    ),
     "color.rgb_to_ass": FunctionSpecification(
         "color.rgb_to_ass",
         "color.rgb_to_ass(red: int, green: int, blue: int) -> str",

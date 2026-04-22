@@ -1011,6 +1011,38 @@ class TestEngineIntegration:
             "T:al<al>al",
         ]
 
+    def test_mixin_can_read_value_locked_by_template(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody(
+                        r"{\1c!lock('main', color.rgb_to_ass(255, 200, 0))!}"
+                    ),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(),
+                ),
+            ],
+            mixin_line=[
+                MixinDeclaration(
+                    body=MixinBody(r"{\3c!get('main')!}"),
+                    scope=Scope.LINE,
+                    modifiers=MixinModifiers(),
+                ),
+            ],
+        )
+
+        results = engine.apply(
+            [make_event()],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == [
+            r"{\3c&H0000C8FF&\1c&H0000C8FF&}goal"
+        ]
+
     def test_mixin_tags_are_merged_with_template_tags_by_default(
         self,
     ) -> None:
@@ -1479,6 +1511,54 @@ class TestEngineIntegration:
             "W0/2go",
             "W1/2go",
         ]
+
+    def test_lock_keeps_value_across_loop_iterations(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("!lock('picked', $loop_i)!-$loop_i"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(
+                        no_text=True,
+                        loops=(LoopDescriptor(name="i", iterations=3),),
+                    ),
+                ),
+            ]
+        )
+
+        results = engine.apply(
+            [make_single_syllable_event()],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == [
+            "0-0",
+            "0-1",
+            "0-2",
+        ]
+
+    def test_set_rejects_keys_locked_by_template(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("!lock('picked', 1)!!set('picked', 2)!"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(no_text=True),
+                ),
+            ]
+        )
+
+        with pytest.raises(TemplateRuntimeError):
+            engine.apply(
+                [make_single_syllable_event()],
+                declarations,
+                Metadata(res_x=1920, res_y=1080),
+                {"Default": make_style()},
+            )
 
     def test_supports_loop_expression_counts(self) -> None:
         engine = build_engine()

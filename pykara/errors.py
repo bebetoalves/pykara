@@ -216,5 +216,13 @@ class BoundMethodInExpressionError(EngineError):
         )
 
 
+class LockedStoreKeyError(EngineError):
+    """Raised when a store key locked by lock() is overwritten."""
+
+    def __init__(self, key: str) -> None:
+        self.key = key
+        super().__init__(f"Cannot set {key!r}: key is locked")
+
+
 class TemplateExecutionCancelledError(EngineError):
     """Raised to explicitly cancel template execution."""

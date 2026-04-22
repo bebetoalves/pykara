@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
-from collections.abc import MutableMapping
+from collections.abc import MutableMapping, MutableSet
 from typing import ClassVar, Protocol, cast
 
-from pykara.errors import BoundMethodInExpressionError
+from pykara.errors import BoundMethodInExpressionError, LockedStoreKeyError
 
 
 class _StoreEnvironment(Protocol):
     store: MutableMapping[str, object]
+    locked_store_keys: MutableSet[str]
+
+
+def _raise_if_callable(function_name: str, key: str, value: object) -> None:
+    if callable(value):
+        raise BoundMethodInExpressionError(
+            expression=f'{function_name}("{key}", ...)',
+            result_type=type(value).__name__,
+        )
 
 
 class GetFunction:
@@ -37,11 +46,25 @@ class SetFunction:
     applicable_to: ClassVar[frozenset[str]] = frozenset({"template"})
 
     def __call__(self, env: object, key: str, value: object) -> object:
-        if callable(value):
-            raise BoundMethodInExpressionError(
-                expression=f'set("{key}", ...)',
-                result_type=type(value).__name__,
-            )
         typed_env = cast(_StoreEnvironment, env)
+        if key in typed_env.locked_store_keys:
+            raise LockedStoreKeyError(key)
+        _raise_if_callable("set", key, value)
         typed_env.store[key] = value
         return value
+
+
+class LockFunction:
+    """Write one value into the shared store and lock the key."""
+
+    name: ClassVar[str] = "lock"
+    aliases: ClassVar[tuple[str, ...]] = ()
+    applicable_to: ClassVar[frozenset[str]] = frozenset({"template"})
+
+    def __call__(self, env: object, key: str, value: object) -> object:
+        typed_env = cast(_StoreEnvironment, env)
+        if key not in typed_env.store:
+            _raise_if_callable("lock", key, value)
+            typed_env.store[key] = value
+        typed_env.locked_store_keys.add(key)
+        return typed_env.store[key]

@@ -16,7 +16,7 @@ from pykara.engine.functions.geometry import (
 )
 from pykara.engine.functions.layer import LayerSetFunction
 from pykara.engine.functions.retime import RETIME_MODES, RetimeFunction
-from pykara.engine.functions.store import GetFunction, SetFunction
+from pykara.engine.functions.store import GetFunction, LockFunction, SetFunction
 
 FUNCTION_REGISTRY = FunctionRegistry()
 for _function in (
@@ -24,6 +24,7 @@ for _function in (
     LayerSetFunction(),
     GetFunction(),
     SetFunction(),
+    LockFunction(),
     AssColorFunction(),
     AssAlphaFunction(),
     InterpolateColorFunction(),
@@ -46,6 +47,7 @@ __all__ = [
     "GetFunction",
     "InterpolateColorFunction",
     "LayerSetFunction",
+    "LockFunction",
     "PolarFunction",
     "RetimeFunction",
     "RoundCoordFunction",
