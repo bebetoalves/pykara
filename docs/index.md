@@ -59,7 +59,7 @@ pykara input.ass output.ass --font-dir ./fonts
 - [retime](./tools/retime.md) — Choose source timing for generated lines.
 - [layer](./tools/layer.md) — Change generated line layers while rendering.
 - [color](./tools/color.md) — Build ASS colors, alpha values, and blends.
-- [global](./tools/global.md) — Share temporary values between templates and scoped code.
+- [global](./tools/global.md) — Share temporary values between templates and mixins.
 - [coord](./tools/coord.md) — Round coordinates or calculate screen-space offsets.
 - [shape](./tools/shape.md) — Move, rotate, center, or generate ASS drawings.
 - [math](./tools/math.md) — Run numeric calculations inside `!expr!` and code.

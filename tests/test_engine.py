@@ -23,7 +23,6 @@ from pykara.declaration.template import (
 from pykara.engine.engine import Engine, _CodeRunner
 from pykara.engine.variable_context import Environment
 from pykara.errors import (
-    BoundMethodInExpressionError,
     ReservedNameError,
     TemplateCodeError,
     TemplateRuntimeError,
@@ -327,6 +326,15 @@ class TestCodeRunner:
 
         with pytest.raises(ReservedNameError, match="reserved name 'color'"):
             runner.run("color = palette.purple[800]", make_env())
+
+    def test_allows_assignment_to_store_function_names_in_code(self) -> None:
+        runner = _CodeRunner()
+        env = make_env()
+
+        runner.run("get = 1\nset = 2", env)
+
+        assert env.user_namespace["get"] == 1
+        assert env.user_namespace["set"] == 2
 
 
 class TestEngineIntegration:
@@ -967,6 +975,42 @@ class TestEngineIntegration:
             "S1:<al>al",
         ]
 
+    def test_mixin_can_use_store_functions(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("T:"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(),
+                ),
+            ],
+            mixin_syl=[
+                MixinDeclaration(
+                    body=MixinBody("!set('label', syl.text)!"),
+                    scope=Scope.SYL,
+                    modifiers=MixinModifiers(),
+                ),
+                MixinDeclaration(
+                    body=MixinBody("<!get('label')!>"),
+                    scope=Scope.SYL,
+                    modifiers=MixinModifiers(),
+                ),
+            ],
+        )
+
+        results = engine.apply(
+            [make_event()],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == [
+            "T:go<go>go",
+            "T:al<al>al",
+        ]
+
     def test_mixin_tags_are_merged_with_template_tags_by_default(
         self,
     ) -> None:
@@ -1151,7 +1195,7 @@ class TestEngineIntegration:
             ],
             syl=[
                 CodeDeclaration(
-                    body=CodeBody("seen = set('last', syl.i)"),
+                    body=CodeBody("seen = syl.i"),
                     scope=Scope.SYL,
                 ),
                 TemplateDeclaration(
@@ -1187,13 +1231,13 @@ class TestEngineIntegration:
         ]
         assert all(result.effect == "fx" for result in results)
 
-    def test_code_setup_does_not_expose_store_functions(self) -> None:
+    def test_code_does_not_expose_store_functions(self) -> None:
         engine = build_engine()
         declarations = ParsedDeclarations(
-            setup=[
+            line=[
                 CodeDeclaration(
                     body=CodeBody("set('main', 1)"),
-                    scope=Scope.SETUP,
+                    scope=Scope.LINE,
                 )
             ]
         )
@@ -1549,9 +1593,10 @@ class TestEngineIntegration:
             line=[
                 CodeDeclaration(
                     body=CodeBody(
-                        "gap = line.start - get('prev_end',"
-                        " line.start - 1000);"
-                        " set('prev_end', line.end)"
+                        "prev_end = line.start - 1000 if line.i == 0 "
+                        "else last_end;"
+                        " gap = line.start - prev_end;"
+                        " last_end = line.end"
                     ),
                     scope=Scope.LINE,
                 ),
@@ -2257,14 +2302,15 @@ class TestEngineIntegration:
         engine = build_engine()
         declarations = ParsedDeclarations(
             syl=[
-                CodeDeclaration(
-                    body=CodeBody("set('bad', layer.set)"),
+                TemplateDeclaration(
+                    body=TemplateBody("!set('bad', layer.set)!"),
                     scope=Scope.SYL,
+                    modifiers=TemplateModifiers(no_text=True),
                 )
             ]
         )
 
-        with pytest.raises(BoundMethodInExpressionError):
+        with pytest.raises(TemplateRuntimeError):
             engine.apply(
                 [make_event()],
                 declarations,

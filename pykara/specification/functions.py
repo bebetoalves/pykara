@@ -40,14 +40,14 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
         "get(key: str, default_value: object = None) -> object",
         "engine",
         "Read one value from the shared store.",
-        frozenset({"template", "code"}),
+        frozenset({"template"}),
     ),
     "set": FunctionSpecification(
         "set",
         "set(key: str, value: object) -> object",
         "engine",
         "Store one value in the shared store.",
-        frozenset({"template", "code"}),
+        frozenset({"template"}),
     ),
     "color.rgb_to_ass": FunctionSpecification(
         "color.rgb_to_ass",

@@ -396,3 +396,12 @@ class TestDefaultRegistry:
         assert namespace["shape"].split_clip(20, 0, 50, 60) == (
             "m 40 60 l 60 60 l 60 50 l 40 50 m 40 70 l 60 70"
         )
+
+    def test_default_registry_does_not_expose_store_functions_to_code(
+        self,
+    ) -> None:
+        env = DummyEnvironment()
+        namespace = FUNCTION_REGISTRY.build_namespace(env, "code")
+
+        assert "get" not in namespace
+        assert "set" not in namespace

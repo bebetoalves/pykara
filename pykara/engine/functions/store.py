@@ -17,7 +17,7 @@ class GetFunction:
 
     name: ClassVar[str] = "get"
     aliases: ClassVar[tuple[str, ...]] = ()
-    applicable_to: ClassVar[frozenset[str]] = frozenset({"template", "code"})
+    applicable_to: ClassVar[frozenset[str]] = frozenset({"template"})
 
     def __call__(
         self,
@@ -34,7 +34,7 @@ class SetFunction:
 
     name: ClassVar[str] = "set"
     aliases: ClassVar[tuple[str, ...]] = ()
-    applicable_to: ClassVar[frozenset[str]] = frozenset({"template", "code"})
+    applicable_to: ClassVar[frozenset[str]] = frozenset({"template"})
 
     def __call__(self, env: object, key: str, value: object) -> object:
         if callable(value):

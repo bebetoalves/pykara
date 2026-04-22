@@ -398,7 +398,6 @@ _RESERVED_EXECUTION_NAMES = frozenset(
         *EXPOSED_MODULES,
         "actor",
         "char",
-        "get",
         "layer",
         "line",
         "loop_i",
@@ -406,7 +405,6 @@ _RESERVED_EXECUTION_NAMES = frozenset(
         "metadata",
         "palette",
         "retime",
-        "set",
         "style",
         "syl",
         "word",
@@ -1142,15 +1140,6 @@ class Environment:
         cached = self._function_namespace_cache.get(cache_key)
         if cached is None:
             cached = FUNCTION_REGISTRY.build_namespace(self, self.declaration)
-            if (
-                self.declaration == "code"
-                and self.active_code_scope is Scope.SETUP
-            ):
-                cached = {
-                    name: value
-                    for name, value in cached.items()
-                    if name not in {"get", "set"}
-                }
             self._function_namespace_cache[cache_key] = cached
         return cached
 
