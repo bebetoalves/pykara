@@ -12,9 +12,17 @@ from pykara.errors import (
     TemplateRuntimeError,
     UnknownVariableError,
 )
+from pykara.specification.expressions import EXPRESSION_PROPERTY_SPECIFICATIONS
 
 _VARIABLE_PATTERN = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*)")
 _EXPRESSION_PATTERN = re.compile(r"!(.+?)!", re.DOTALL)
+_ALIAS_EXPRESSION_BY_VARIABLE = {
+    spec.source_variable: f"{object_name}.{property_name}"
+    for (object_name, property_name), spec in (
+        EXPRESSION_PROPERTY_SPECIFICATIONS.items()
+    )
+    if spec.source_variable is not None
+}
 
 
 class TextRenderer:
@@ -29,27 +37,41 @@ class TextRenderer:
         if "$" not in text and "!" not in text:
             return text
 
-        rendered = text
-        if "$" in rendered:
-            variables = env.variable_dict()
-            rendered = _VARIABLE_PATTERN.sub(
-                lambda match: self._replace_variable(
-                    match.group(1),
+        rendered: list[str] = []
+        position = 0
+        while position < len(text):
+            variable_match = _VARIABLE_PATTERN.match(text, position)
+            if variable_match is not None:
+                rendered.append(
+                    self._replace_variable(
+                        variable_match.group(1),
+                        text,
+                        env.variable_dict(),
+                    )
+                )
+                position = variable_match.end()
+                continue
+
+            expression_match = _EXPRESSION_PATTERN.match(text, position)
+            if expression_match is not None:
+                expression = self._render_expression_variables(
+                    expression_match.group(1),
                     text,
-                    variables,
-                ),
-                rendered,
-            )
-        if "!" not in rendered:
-            return rendered
-        namespace = env.as_dict()
-        return _EXPRESSION_PATTERN.sub(
-            lambda match: self._replace_expression(
-                match.group(1),
-                namespace,
-            ),
-            rendered,
-        )
+                    env,
+                )
+                rendered.append(
+                    self._replace_expression(
+                        expression,
+                        env.as_dict(),
+                    )
+                )
+                position = expression_match.end()
+                continue
+
+            rendered.append(text[position])
+            position += 1
+
+        return "".join(rendered)
 
     def evaluate_expression(
         self,
@@ -70,6 +92,34 @@ class TextRenderer:
         if variable_name not in variables:
             raise UnknownVariableError(variable_name, template_text)
         return str(variables[variable_name])
+
+    def _render_expression_variables(
+        self,
+        expression: str,
+        template_text: str,
+        env: Environment,
+    ) -> str:
+        if "$" not in expression:
+            return expression
+        variables = env.variable_dict()
+        return _VARIABLE_PATTERN.sub(
+            lambda match: self._replace_expression_variable(
+                match.group(1),
+                template_text,
+                variables,
+            ),
+            expression,
+        )
+
+    def _replace_expression_variable(
+        self,
+        variable_name: str,
+        template_text: str,
+        variables: dict[str, object],
+    ) -> str:
+        if variable_name in _ALIAS_EXPRESSION_BY_VARIABLE:
+            return _ALIAS_EXPRESSION_BY_VARIABLE[variable_name]
+        return self._replace_variable(variable_name, template_text, variables)
 
     def _replace_expression(
         self,

@@ -215,7 +215,7 @@ VARIABLE_SPECIFICATIONS: dict[str, VariableSpecification] = {
         "char_n",
         "int",
         "char_vars",
-        "Total number of characters in the current syllable.",
+        "Total number of characters in the current line.",
     ),
     "char_center": _variable(
         "char_center", "int", "char_vars", "Character horizontal center."

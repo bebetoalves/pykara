@@ -37,6 +37,22 @@ from pykara.parsing import (
 )
 from pykara.processing.font_metrics import TextMeasurement
 from pykara.processing.line_preprocessor import LinePreprocessor
+from pykara.specification.expressions import EXPRESSION_PROPERTY_SPECIFICATIONS
+
+
+def template_declarations_for_scope(
+    scope: Scope,
+    declaration: TemplateDeclaration,
+) -> ParsedDeclarations:
+    if scope is Scope.LINE:
+        return ParsedDeclarations(line=[declaration])
+    if scope is Scope.WORD:
+        return ParsedDeclarations(word=[declaration])
+    if scope is Scope.SYL:
+        return ParsedDeclarations(syl=[declaration])
+    if scope is Scope.CHAR:
+        return ParsedDeclarations(char=[declaration])
+    raise AssertionError(f"unexpected template scope: {scope}")
 
 
 @dataclass(slots=True)
@@ -338,6 +354,78 @@ class TestCodeRunner:
 
 
 class TestEngineIntegration:
+    def test_dollar_variables_match_object_property_aliases(self) -> None:
+        engine = build_engine()
+        metadata = Metadata(res_x=1920, res_y=1080)
+        styles = {"Default": make_style()}
+        line_scopes = frozenset({Scope.LINE, Scope.WORD, Scope.SYL, Scope.CHAR})
+        syl_scopes = frozenset({Scope.SYL, Scope.CHAR})
+        scenarios = [
+            ("baseline", line_scopes, ""),
+            ("layer.set", line_scopes, "!layer.set(7)!"),
+            ("retime.line", line_scopes, "!retime.line(-150,-50)!"),
+            ("retime.preline", line_scopes, "!retime.preline(-150,-50)!"),
+            ("retime.postline", line_scopes, "!retime.postline(-150,-50)!"),
+            (
+                "layer.set+retime.line",
+                line_scopes,
+                "!layer.set(7)!!retime.line(-150,-50)!",
+            ),
+            ("retime.syl", syl_scopes, "!retime.syl(-150,-50)!"),
+            ("retime.presyl", syl_scopes, "!retime.presyl(-150,-50)!"),
+            ("retime.postsyl", syl_scopes, "!retime.postsyl(-150,-50)!"),
+            (
+                "retime.start2syl",
+                syl_scopes,
+                "!retime.start2syl(-150,-50)!",
+            ),
+            ("retime.syl2end", syl_scopes, "!retime.syl2end(-150,-50)!"),
+        ]
+        separator = "<<<ALIAS>>>"
+
+        for scenario_name, scenario_scopes, prefix in scenarios:
+            for scope in scenario_scopes:
+                for (
+                    object_name,
+                    property_name,
+                ), spec in EXPRESSION_PROPERTY_SPECIFICATIONS.items():
+                    if (
+                        spec.source_variable is None
+                        or scope not in spec.available_scopes
+                    ):
+                        continue
+                    expression = f"{object_name}.{property_name}"
+                    variable = spec.source_variable
+                    declaration = TemplateDeclaration(
+                        body=TemplateBody(
+                            f"{prefix}!{expression}!{separator}${variable}"
+                        ),
+                        scope=scope,
+                        modifiers=TemplateModifiers(no_text=True),
+                    )
+                    declarations = template_declarations_for_scope(
+                        scope,
+                        declaration,
+                    )
+
+                    results = engine.apply(
+                        [make_event()],
+                        declarations,
+                        metadata,
+                        styles,
+                    )
+
+                    for result in results:
+                        expression_value, variable_value = result.text.split(
+                            separator,
+                            1,
+                        )
+                        assert expression_value == variable_value, (
+                            f"{scenario_name}/{scope.value}: "
+                            f"{expression}={expression_value!r} "
+                            f"!= ${variable}={variable_value!r}"
+                        )
+
     def test_template_variables_include_values_defined_by_code(self) -> None:
         engine = build_engine()
         declarations = ParsedDeclarations(
@@ -1255,11 +1343,11 @@ class TestEngineIntegration:
         assert [result.text for result in results] == [
             "P:L0-",
             "S0:go",
-            "C2-945:g",
-            "C2-955:o",
+            "C4-945:g",
+            "C4-955:o",
             "S1:al",
-            "C2-965:a",
-            "C2-975:l",
+            "C4-965:a",
+            "C4-975:l",
         ]
         assert all(result.effect == "fx" for result in results)
 

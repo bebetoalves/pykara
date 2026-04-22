@@ -18,7 +18,10 @@ from pykara.declaration.template.modifiers import TemplateModifiers
 from pykara.engine.functions import FUNCTION_REGISTRY
 from pykara.engine.palette import palette
 from pykara.errors import ExecutionAttributeUnavailableError
-from pykara.specification import EXPOSED_MODULES
+from pykara.specification import (
+    EXPOSED_MODULES,
+    EXPRESSION_PROPERTY_SPECIFICATIONS,
+)
 
 
 def _round_coordinate(value: float) -> int:
@@ -698,6 +701,8 @@ class _ExpressionLineObject:
 
     @property
     def mid(self) -> float:
+        if self._env.line is not None:
+            return self._env.line.start_time + self._env.line.duration / 2
         return self._required_float("line_mid", self._env.vars.line_mid)
 
     @property
@@ -1110,6 +1115,7 @@ class Environment:
         variables.update(self.vars.as_dict())
         if self.declaration == "template":
             variables.update(self._template_variables())
+        variables.update(self._alias_variables())
         variables.update(self._loop_variables())
         return variables
 
@@ -1176,6 +1182,27 @@ class Environment:
         if self.line is not None:
             variables["layer"] = self.line.layer
             variables["actor"] = self.line.actor
+        return variables
+
+    def _alias_variables(self) -> dict[str, object]:
+        variables: dict[str, object] = {}
+        expression_objects = self._expression_objects()
+        for (
+            object_name,
+            property_name,
+        ), spec in EXPRESSION_PROPERTY_SPECIFICATIONS.items():
+            if spec.source_variable is None:
+                continue
+            expression_object = expression_objects.get(object_name)
+            if expression_object is None:
+                continue
+            try:
+                variables[spec.source_variable] = getattr(
+                    expression_object,
+                    property_name,
+                )
+            except ExecutionAttributeUnavailableError:
+                continue
         return variables
 
     def _expression_objects(self) -> dict[str, object]:

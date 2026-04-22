@@ -636,7 +636,7 @@ EXPRESSION_PROPERTY_SPECIFICATIONS: dict[
         name="n",
         type="int",
         available_scopes=frozenset({Scope.CHAR}),
-        source_variable=None,
+        source_variable="char_n",
         description="Total number of characters in the current line.",
     ),
     ("char", "i"): ExpressionPropertySpecification(
@@ -644,7 +644,7 @@ EXPRESSION_PROPERTY_SPECIFICATIONS: dict[
         name="i",
         type="int",
         available_scopes=frozenset({Scope.CHAR}),
-        source_variable=None,
+        source_variable="char_i",
         description="Character index in the current line.",
     ),
     ("char", "left"): ExpressionPropertySpecification(

@@ -9,7 +9,7 @@ from types import CodeType
 import pytest
 
 from pykara.data import Event, Highlight, Karaoke, Metadata, Style, Syllable
-from pykara.engine.variable_context import Environment
+from pykara.engine.variable_context import Environment, GeneratedLine
 from pykara.errors import (
     BoundMethodInExpressionError,
     TemplateCodeError,
@@ -254,8 +254,31 @@ class TestTextRenderer:
         )
 
         assert rendered == "35-80-35-80"
-        assert variable_dict_calls == 1
-        assert as_dict_calls == 1
+        assert variable_dict_calls == 2
+        assert as_dict_calls == 2
+
+    def test_evaluates_variables_and_expressions_in_source_order(self) -> None:
+        renderer = TextRenderer()
+        env = make_env()
+        assert env.source_line is not None
+        env.line = GeneratedLine.from_event(env.source_line, make_style())
+
+        rendered = renderer.render(
+            "$layer-!layer.set(7)!$layer-!line.layer == $layer!",
+            env,
+        )
+
+        assert rendered == "0-7-True"
+
+    def test_expression_variables_are_object_property_aliases(self) -> None:
+        renderer = TextRenderer()
+        env = make_env()
+        assert env.source_line is not None
+        env.line = GeneratedLine.from_event(env.source_line, make_style())
+
+        rendered = renderer.render("!layer.set(7) or $layer!", env)
+
+        assert rendered == "7"
 
     def test_exposes_line_syllables_in_expressions(self) -> None:
         renderer = TextRenderer()
