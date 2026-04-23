@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from types import SimpleNamespace
@@ -148,6 +149,35 @@ def make_style(name: str = "Default") -> Style:
     )
 
 
+def make_retime_elements() -> tuple[DummySyllable, ...]:
+    return (
+        DummySyllable(
+            start_time=500,
+            end_time=900,
+            duration=400,
+            index=0,
+            center=10.0,
+            x=10.0,
+        ),
+        DummySyllable(
+            start_time=1000,
+            end_time=1300,
+            duration=300,
+            index=1,
+            center=30.0,
+            x=30.0,
+        ),
+        DummySyllable(
+            start_time=1600,
+            end_time=1900,
+            duration=300,
+            index=2,
+            center=50.0,
+            x=50.0,
+        ),
+    )
+
+
 class TestRetimeFunction:
     @pytest.mark.parametrize(
         ("target", "start_offset", "end_offset", "expected"),
@@ -214,6 +244,202 @@ class TestRetimeFunction:
         retime.line.ltr(-300, 200)
 
         assert (env.line.start_time, env.line.end_time) == (1000, 5200)
+
+    @pytest.mark.parametrize(
+        ("preset", "factor"),
+        [
+            ("rtl", 0.5),
+            ("from_center", 0.0),
+            ("from_edges", 1.0),
+            ("odd_first", 1.0),
+            ("even_first", 0.0),
+            ("spatial_ltr", 0.5),
+            ("spatial_rtl", 0.5),
+            ("random", abs(math.sin(2 * 127.1 + 311.7))),
+        ],
+    )
+    def test_applies_line_preset_factor_variants(
+        self,
+        preset: str,
+        factor: float,
+    ) -> None:
+        env = DummyEnvironment(
+            syl=DummySyllable(
+                start_time=1000,
+                end_time=1300,
+                duration=300,
+                index=1,
+                center=30.0,
+                x=30.0,
+            ),
+            retime_line_syls=make_retime_elements(),
+        )
+        retime = RetimeFunction().build_bound(env)
+
+        getattr(retime.line, preset)(-300, 200)
+
+        expected_start = 1000 + round(-300 * (1 - factor))
+        expected_end = 5000 + round(200 * factor)
+        assert env.line is not None
+        assert (env.line.start_time, env.line.end_time) == (
+            expected_start,
+            expected_end,
+        )
+
+    def test_applies_line_preset_to_word_collection(self) -> None:
+        words = make_retime_elements()
+        env = DummyEnvironment(
+            active_template_scope=Scope.WORD,
+            word=words[2],
+            retime_line_words=words,
+        )
+        retime = RetimeFunction().build_bound(env)
+
+        retime.line.ltr(-300, 200)
+
+        assert env.line is not None
+        assert (env.line.start_time, env.line.end_time) == (1000, 5200)
+
+    def test_applies_line_preset_to_line_char_collection(self) -> None:
+        chars = make_retime_elements()
+        env = DummyEnvironment(
+            active_template_scope=Scope.CHAR,
+            char_index=1,
+            retime_line_chars=chars,
+        )
+        retime = RetimeFunction().build_bound(env)
+
+        retime.line.ltr(-300, 200)
+
+        assert env.line is not None
+        assert (env.line.start_time, env.line.end_time) == (850, 5100)
+
+    def test_applies_syllable_preset_to_syllable_char_collection(self) -> None:
+        chars = make_retime_elements()
+        env = DummyEnvironment(
+            active_template_scope=Scope.CHAR,
+            syl=DummySyllable(
+                start_time=500,
+                end_time=900,
+                duration=400,
+            ),
+            char=chars[1],
+            retime_syl_chars=chars,
+        )
+        retime = RetimeFunction().build_bound(env)
+
+        retime.syl.ltr(-300, 200)
+
+        assert env.line is not None
+        assert (env.line.start_time, env.line.end_time) == (1350, 2000)
+
+    def test_applies_start_to_syllable_preset_to_syllable_collection(
+        self,
+    ) -> None:
+        syllables = make_retime_elements()
+        env = DummyEnvironment(
+            syl=syllables[1],
+            retime_line_syls=syllables,
+        )
+        retime = RetimeFunction().build_bound(env)
+
+        retime.start2syl.ltr(-300, 200)
+
+        assert env.line is not None
+        assert (env.line.start_time, env.line.end_time) == (850, 2100)
+
+    def test_unknown_preset_attribute_raises_attribute_error(self) -> None:
+        retime = RetimeFunction().build_bound(DummyEnvironment())
+
+        with pytest.raises(AttributeError, match="missing"):
+            _ = retime.line.missing
+
+    def test_rejects_retime_without_template_scope(self) -> None:
+        env = DummyEnvironment(active_template_scope=None)
+        retime = RetimeFunction().build_bound(env)
+
+        with pytest.raises(EngineError, match="only valid"):
+            retime.line()
+
+    def test_rejects_retime_without_source_line(self) -> None:
+        env = DummyEnvironment(source_line=cast(DummyTimedLine, None))
+        retime = RetimeFunction().build_bound(env)
+
+        with pytest.raises(EngineError, match="line context"):
+            retime.line()
+
+    def test_rejects_retime_without_output_line(self) -> None:
+        env = DummyEnvironment(line=cast(DummyGeneratedLine, None))
+        retime = RetimeFunction().build_bound(env)
+
+        with pytest.raises(EngineError, match="active generated line"):
+            retime.line()
+
+    def test_rejects_retime_without_syllable_context(self) -> None:
+        env = DummyEnvironment(syl=None)
+        retime = RetimeFunction().build_bound(env)
+
+        with pytest.raises(EngineError, match="requires syllable context"):
+            retime.syl()
+
+    def test_rejects_line_preset_in_line_scope(self) -> None:
+        env = DummyEnvironment(active_template_scope=Scope.LINE)
+        retime = RetimeFunction().build_bound(env)
+
+        with pytest.raises(EngineError, match="invalid in line"):
+            retime.line.ltr()
+
+    def test_rejects_syllable_preset_outside_char_scope(self) -> None:
+        env = DummyEnvironment(active_template_scope=Scope.SYL)
+        retime = RetimeFunction().build_bound(env)
+
+        with pytest.raises(EngineError, match="invalid in syl"):
+            retime.syl.ltr()
+
+    def test_rejects_start_to_syllable_preset_outside_syllable_scope(
+        self,
+    ) -> None:
+        env = DummyEnvironment(active_template_scope=Scope.CHAR)
+        retime = RetimeFunction().build_bound(env)
+
+        with pytest.raises(EngineError, match="invalid in char"):
+            retime.start2syl.ltr()
+
+    def test_rejects_line_preset_without_char_index(self) -> None:
+        env = DummyEnvironment(active_template_scope=Scope.CHAR)
+        retime = RetimeFunction().build_bound(env)
+
+        with pytest.raises(EngineError, match="requires char context"):
+            retime.line.ltr()
+
+    def test_rejects_syllable_preset_without_char_context(self) -> None:
+        env = DummyEnvironment(
+            active_template_scope=Scope.CHAR,
+            retime_syl_chars=make_retime_elements(),
+        )
+        retime = RetimeFunction().build_bound(env)
+
+        with pytest.raises(EngineError, match="requires char context"):
+            retime.syl.ltr()
+
+    def test_rejects_spatial_preset_without_distinct_x_positions(self) -> None:
+        env = DummyEnvironment(
+            syl=DummySyllable(
+                start_time=1000,
+                end_time=1300,
+                duration=300,
+                index=1,
+                x=10.0,
+            ),
+            retime_line_syls=(
+                DummySyllable(0, 100, 100, index=0, x=10.0),
+                DummySyllable(100, 200, 100, index=1, x=10.0),
+            ),
+        )
+        retime = RetimeFunction().build_bound(env)
+
+        with pytest.raises(EngineError, match="distinct x positions"):
+            retime.line.spatial_ltr()
 
     def test_rejects_degenerate_preset_collection(self) -> None:
         env = DummyEnvironment(retime_line_syls=(DummySyllable(0, 100, 100),))

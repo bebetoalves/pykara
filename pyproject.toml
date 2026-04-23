@@ -19,6 +19,8 @@ pykara = "pykara.interfaces.cli.main:main"
 
 [project.optional-dependencies]
 dev = [
+    "fonttools",
+    "matplotlib",
     "mdformat",
     "ruff",
     "pyright",
