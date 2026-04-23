@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 import random
 import re
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import replace
 from types import CodeType
@@ -14,7 +14,6 @@ from typing import cast
 from pykara.data import Event, Metadata, Style
 from pykara.data.events.karaoke import Karaoke, Syllable, Word
 from pykara.declaration import Scope
-from pykara.declaration.template import LoopDescriptor
 from pykara.engine.variable_context import (
     Environment,
     GeneratedLine,
@@ -42,7 +41,6 @@ from pykara.processing.text_renderer import TextRenderer
 from pykara.support.ass_tags import merge_adjacent_override_blocks
 
 _PLAIN_WORD_PATTERN = re.compile(r"[ \t]*[^ \t]+")
-_TEMPLATE_VARIABLE_PATTERN = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*)")
 
 
 class _AssignedNameCollector(ast.NodeVisitor):
@@ -316,7 +314,6 @@ class Engine:
         )
 
         output_events: list[Event] = []
-        had_looping_line_template = False
         for declaration in declarations.line:
             if not self._declaration_applies_to_style(declaration, event):
                 continue
@@ -331,26 +328,6 @@ class Engine:
                 self._execute_code(declaration, env)
                 continue
 
-            descendants: Callable[[], list[Event]] | None = None
-            if (
-                declaration.modifiers.loops
-                and self._line_descendants_reference_loops(
-                    declaration,
-                    declarations,
-                )
-            ):
-                had_looping_line_template = True
-
-                def render_line_descendants() -> list[Event]:
-                    return self._apply_words(
-                        event=event,
-                        words=words,
-                        line_char_count=line_char_count,
-                        declarations=declarations,
-                        env=env,
-                    )
-
-                descendants = render_line_descendants
             output_events.extend(
                 self._render_line_template(
                     declaration,
@@ -358,20 +335,18 @@ class Engine:
                     declarations,
                     env,
                     reference_style,
-                    descendants,
                 )
             )
 
-        if not had_looping_line_template:
-            output_events.extend(
-                self._apply_words(
-                    event=event,
-                    words=words,
-                    line_char_count=line_char_count,
-                    declarations=declarations,
-                    env=env,
-                )
+        output_events.extend(
+            self._apply_words(
+                event=event,
+                words=words,
+                line_char_count=line_char_count,
+                declarations=declarations,
+                env=env,
             )
+        )
 
         env.word = None
         env.syl = None
@@ -414,7 +389,6 @@ class Engine:
         declarations: ParsedDeclarations,
         env: Environment,
         styleref: Style,
-        descendants: Callable[[], list[Event]] | None,
     ) -> list[Event]:
         if (
             declaration.modifiers.no_blank
@@ -431,7 +405,6 @@ class Engine:
                 env,
                 styleref,
             ),
-            descendants,
         )
 
     def _render_syllable_template(
@@ -441,7 +414,6 @@ class Engine:
         declarations: ParsedDeclarations,
         syllable: Syllable,
         env: Environment,
-        descendants: Callable[[], list[Event]] | None,
     ) -> list[Event]:
         if declaration.modifiers.no_blank and self._is_blank_syllable(syllable):
             return []
@@ -455,7 +427,6 @@ class Engine:
                 syllable,
                 env,
             ),
-            descendants,
         )
 
     def _render_word_template(
@@ -465,7 +436,6 @@ class Engine:
         declarations: ParsedDeclarations,
         word: Word,
         env: Environment,
-        descendants: Callable[[], list[Event]] | None,
     ) -> list[Event]:
         if declaration.modifiers.no_blank and word.trimmed_text == "":
             return []
@@ -479,7 +449,6 @@ class Engine:
                 word,
                 env,
             ),
-            descendants,
         )
 
     def _render_char_template(
@@ -502,7 +471,6 @@ class Engine:
                 char_syllable,
                 env,
             ),
-            None,
         )
 
     def _loop_render(
@@ -510,7 +478,6 @@ class Engine:
         declaration: TemplateDeclaration,
         env: Environment,
         builder: Callable[[], Event],
-        descendants: Callable[[], list[Event]] | None,
     ) -> list[Event]:
         events: list[Event] = []
 
@@ -523,8 +490,6 @@ class Engine:
                 if not self._passes_conditions(declaration, env):
                     continue
                 events.append(builder())
-                if descendants is not None:
-                    events.extend(descendants())
             finally:
                 env.pop_loop_states(len(loop_state_set))
 
@@ -547,7 +512,6 @@ class Engine:
                 env.word = word
                 env.vars.set_word(word)
 
-                had_looping_word_template = False
                 for declaration in declarations.word:
                     if not self._declaration_applies_to_style(
                         declaration,
@@ -566,22 +530,6 @@ class Engine:
                     if not self._passes_conditions(declaration, env):
                         continue
 
-                    descendants: Callable[[], list[Event]] | None = None
-                    if (
-                        declaration.modifiers.loops
-                        and self._word_descendants_reference_loops(
-                            declaration,
-                            declarations,
-                        )
-                    ):
-                        had_looping_word_template = True
-                        descendants = self._make_syllable_descendants(
-                            event=event,
-                            declarations=declarations,
-                            syllables=word.syllables,
-                            line_char_start_index=next_char_index,
-                            env=env,
-                        )
                     output_events.extend(
                         self._render_word_template(
                             declaration,
@@ -589,42 +537,20 @@ class Engine:
                             declarations,
                             word,
                             env,
-                            descendants,
                         )
                     )
 
-                if not had_looping_word_template:
-                    output_events.extend(
-                        self._apply_syllables(
-                            event=event,
-                            declarations=declarations,
-                            syllables=word.syllables,
-                            line_char_start_index=next_char_index,
-                            env=env,
-                        )
+                output_events.extend(
+                    self._apply_syllables(
+                        event=event,
+                        declarations=declarations,
+                        syllables=word.syllables,
+                        line_char_start_index=next_char_index,
+                        env=env,
                     )
+                )
                 next_char_index += self._count_text_characters(word.syllables)
         return output_events
-
-    def _make_syllable_descendants(
-        self,
-        *,
-        event: Event,
-        declarations: ParsedDeclarations,
-        syllables: tuple[Syllable, ...],
-        line_char_start_index: int,
-        env: Environment,
-    ) -> Callable[[], list[Event]]:
-        def render_syllable_descendants() -> list[Event]:
-            return self._apply_syllables(
-                event=event,
-                declarations=declarations,
-                syllables=syllables,
-                line_char_start_index=line_char_start_index,
-                env=env,
-            )
-
-        return render_syllable_descendants
 
     def _apply_syllables(
         self,
@@ -644,7 +570,6 @@ class Engine:
                 char_syllables = self._iter_char_syllables(env, syllable)
                 env.retime_syl_chars = char_syllables
 
-                had_looping_syl_template = False
                 for declaration in declarations.syl:
                     if not self._declaration_applies_to_style(
                         declaration,
@@ -667,23 +592,6 @@ class Engine:
                     ):
                         continue
 
-                    descendants: Callable[[], list[Event]] | None = None
-                    if (
-                        declaration.modifiers.loops
-                        and self._syl_descendants_reference_loops(
-                            declaration,
-                            declarations,
-                        )
-                    ):
-                        had_looping_syl_template = True
-                        descendants = self._make_char_descendants(
-                            event=event,
-                            declarations=declarations,
-                            source_syllable=syllable,
-                            char_syllables=char_syllables,
-                            line_char_start_index=next_char_index,
-                            env=env,
-                        )
                     output_events.extend(
                         self._render_syllable_template(
                             declaration,
@@ -691,45 +599,21 @@ class Engine:
                             declarations,
                             syllable,
                             env,
-                            descendants,
                         )
                     )
 
-                if not had_looping_syl_template:
-                    output_events.extend(
-                        self._apply_chars(
-                            event=event,
-                            declarations=declarations,
-                            source_syllable=syllable,
-                            char_syllables=char_syllables,
-                            line_char_start_index=next_char_index,
-                            env=env,
-                        )
+                output_events.extend(
+                    self._apply_chars(
+                        event=event,
+                        declarations=declarations,
+                        source_syllable=syllable,
+                        char_syllables=char_syllables,
+                        line_char_start_index=next_char_index,
+                        env=env,
                     )
+                )
                 next_char_index += len(char_syllables)
         return output_events
-
-    def _make_char_descendants(
-        self,
-        *,
-        event: Event,
-        declarations: ParsedDeclarations,
-        source_syllable: Syllable,
-        char_syllables: tuple[Syllable, ...],
-        line_char_start_index: int,
-        env: Environment,
-    ) -> Callable[[], list[Event]]:
-        def render_char_descendants() -> list[Event]:
-            return self._apply_chars(
-                event=event,
-                declarations=declarations,
-                source_syllable=source_syllable,
-                char_syllables=char_syllables,
-                line_char_start_index=line_char_start_index,
-                env=env,
-            )
-
-        return render_char_descendants
 
     def _apply_chars(
         self,
@@ -1056,103 +940,6 @@ class Engine:
             env.vars.syl_i = saved_syl_i
             env.vars.syl_n = saved_syl_n
             env.active_line_syls = saved_line_syls
-
-    def _line_descendants_reference_loops(
-        self,
-        declaration: TemplateDeclaration,
-        declarations: ParsedDeclarations,
-    ) -> bool:
-        descendants = [
-            *declarations.word,
-            *declarations.syl,
-            *declarations.char,
-            *declarations.mixin_word,
-            *declarations.mixin_syl,
-            *declarations.mixin_char,
-        ]
-        return self._declarations_reference_loops(
-            descendants,
-            declaration.modifiers.loops,
-        )
-
-    def _word_descendants_reference_loops(
-        self,
-        declaration: TemplateDeclaration,
-        declarations: ParsedDeclarations,
-    ) -> bool:
-        descendants = [
-            *declarations.syl,
-            *declarations.char,
-            *declarations.mixin_syl,
-            *declarations.mixin_char,
-        ]
-        return self._declarations_reference_loops(
-            descendants,
-            declaration.modifiers.loops,
-        )
-
-    def _syl_descendants_reference_loops(
-        self,
-        declaration: TemplateDeclaration,
-        declarations: ParsedDeclarations,
-    ) -> bool:
-        descendants = [
-            *declarations.char,
-            *declarations.mixin_char,
-        ]
-        return self._declarations_reference_loops(
-            descendants,
-            declaration.modifiers.loops,
-        )
-
-    def _declarations_reference_loops(
-        self,
-        declarations: Sequence[
-            TemplateDeclaration | CodeDeclaration | MixinDeclaration
-        ],
-        loops: tuple[LoopDescriptor, ...],
-    ) -> bool:
-        loop_variable_names = self._loop_variable_names(loops)
-        return any(
-            isinstance(declaration, (TemplateDeclaration, MixinDeclaration))
-            and bool(
-                self._template_variable_names(declaration) & loop_variable_names
-            )
-            for declaration in declarations
-        )
-
-    def _loop_variable_names(
-        self,
-        loops: tuple[LoopDescriptor, ...],
-    ) -> frozenset[str]:
-        variable_names: set[str] = set()
-        for loop in loops:
-            variable_names.add(f"loop_{loop.name}_i")
-            variable_names.add(f"loop_{loop.name}_n")
-        if len(loops) == 1:
-            variable_names.update({"loop_i", "loop_n"})
-        return frozenset(variable_names)
-
-    def _template_variable_names(
-        self,
-        declaration: TemplateDeclaration | MixinDeclaration,
-    ) -> frozenset[str]:
-        variable_names = set(
-            _TEMPLATE_VARIABLE_PATTERN.findall(declaration.body.text)
-        )
-        if declaration.modifiers.when is not None:
-            variable_names.update(
-                _TEMPLATE_VARIABLE_PATTERN.findall(
-                    declaration.modifiers.when,
-                )
-            )
-        if declaration.modifiers.unless is not None:
-            variable_names.update(
-                _TEMPLATE_VARIABLE_PATTERN.findall(
-                    declaration.modifiers.unless,
-                )
-            )
-        return frozenset(variable_names)
 
     def _render_mixin_text(
         self,

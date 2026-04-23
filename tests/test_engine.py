@@ -1953,7 +1953,7 @@ class TestEngineIntegration:
                 {"Default": make_style()},
             )
 
-    def test_line_loop_is_visible_to_syl_and_char(self) -> None:
+    def test_line_loop_does_not_make_syl_loop_i_ambiguous(self) -> None:
         engine = build_engine()
         declarations = ParsedDeclarations(
             line=[
@@ -1970,14 +1970,10 @@ class TestEngineIntegration:
                 TemplateDeclaration(
                     body=TemplateBody("S$loop_i:"),
                     scope=Scope.SYL,
-                    modifiers=TemplateModifiers(no_text=False),
-                )
-            ],
-            char=[
-                TemplateDeclaration(
-                    body=TemplateBody("C$loop_i-$char_x:"),
-                    scope=Scope.CHAR,
-                    modifiers=TemplateModifiers(no_text=False),
+                    modifiers=TemplateModifiers(
+                        no_text=False,
+                        loops=(LoopDescriptor(name="i", iterations=2),),
+                    ),
                 )
             ],
         )
@@ -1991,13 +1987,9 @@ class TestEngineIntegration:
 
         assert [result.text for result in results] == [
             "L0",
-            "S0:go",
-            "C0-955:g",
-            "C0-965:o",
             "L1",
+            "S0:go",
             "S1:go",
-            "C1-955:g",
-            "C1-965:o",
         ]
 
     def test_independent_line_loops_do_not_duplicate_syl_templates(
@@ -2059,32 +2051,27 @@ class TestEngineIntegration:
             "S:go",
         ]
 
-    def test_syl_loop_is_visible_to_char(self) -> None:
+    def test_syl_loop_does_not_make_char_loop_i_ambiguous(self) -> None:
         engine = build_engine()
         declarations = ParsedDeclarations(
             syl=[
                 TemplateDeclaration(
-                    body=TemplateBody("S$loop_wave_i:"),
+                    body=TemplateBody("S$loop_i:"),
                     scope=Scope.SYL,
                     modifiers=TemplateModifiers(
                         when="syl.i == 0",
-                        loops=(
-                            LoopDescriptor(
-                                name="wave",
-                                iterations=2,
-                                explicit_name="wave",
-                            ),
-                        ),
+                        loops=(LoopDescriptor(name="i", iterations=2),),
                     ),
                 )
             ],
             char=[
                 TemplateDeclaration(
-                    body=TemplateBody("C$loop_wave_i-$char_x:"),
+                    body=TemplateBody("C$loop_i-$char_x:"),
                     scope=Scope.CHAR,
                     modifiers=TemplateModifiers(
                         no_text=False,
                         when="syl.i == 0",
+                        loops=(LoopDescriptor(name="i", iterations=2),),
                     ),
                 )
             ],
@@ -2099,10 +2086,10 @@ class TestEngineIntegration:
 
         assert [result.text for result in results] == [
             "S0:go",
-            "C0-955:g",
-            "C0-965:o",
             "S1:go",
+            "C0-955:g",
             "C1-955:g",
+            "C0-965:o",
             "C1-965:o",
         ]
 
