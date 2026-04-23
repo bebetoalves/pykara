@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
+
+import pytest
 
 from pykara.adapters import SubtitleDocument
 from pykara.adapters.input.sub_station_alpha import SubStationAlphaReader
 from pykara.adapters.output.json_adapter import JsonWriter
 from pykara.adapters.output.sub_station_alpha import SubStationAlphaWriter
 from pykara.data import Event, Metadata, Style
+from pykara.errors import DocumentWriteError
 
 
 def make_style() -> Style:
@@ -99,6 +103,27 @@ class TestSubStationAlphaWriter:
         assert loaded.events[1].effect == "fx"
         assert loaded.events[1].layer == 1
 
+    def test_write_wraps_save_errors(self, tmp_path: Path) -> None:
+        document = make_document()
+        path = tmp_path / "missing" / "output.ass"
+
+        with pytest.raises(DocumentWriteError) as exc_info:
+            SubStationAlphaWriter().write(document, path)
+
+        assert exc_info.value.path == path
+
+    def test_write_accepts_style_colors_with_trailing_ampersand(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        style = replace(make_style(), primary_colour="&H11223344&")
+        document = replace(make_document(), styles={style.name: style})
+        path = tmp_path / "trailing-color.ass"
+
+        SubStationAlphaWriter().write(document, path)
+
+        assert path.exists()
+
 
 class TestJsonWriter:
     def test_to_dict_matches_expected_schema(self) -> None:
@@ -128,3 +153,12 @@ class TestJsonWriter:
         events = cast(list[dict[str, Any]], loaded["events"])
         assert metadata["res_y"] == 1080
         assert events[1]["actor"] == "FX"
+
+    def test_write_wraps_file_errors(self, tmp_path: Path) -> None:
+        document = make_document()
+        path = tmp_path / "missing" / "output.json"
+
+        with pytest.raises(DocumentWriteError) as exc_info:
+            JsonWriter().write(document, path)
+
+        assert exc_info.value.path == path

@@ -75,11 +75,13 @@ def make_template_declaration(
     text: str = "{\\pos($line_left,$line_top)}",
     scope: Scope = Scope.SYL,
     modifiers: TemplateModifiers | None = None,
+    style: str = "",
 ) -> TemplateDeclaration:
     return TemplateDeclaration(
         body=TemplateBody(text),
         scope=scope,
         modifiers=modifiers or TemplateModifiers(),
+        style=style,
         actor="lead",
     )
 
@@ -169,6 +171,20 @@ class TestCrossValidator:
             "cross.variable_scope_allowed",
         )
 
+    def test_ignores_unknown_template_variables(self) -> None:
+        declarations = ParsedDeclarations(
+            syl=[
+                make_template_declaration(
+                    text="$custom_name",
+                    scope=Scope.SYL,
+                )
+            ]
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert report.violations == ()
+
     def test_accepts_quoted_string_arguments(self) -> None:
         declarations = ParsedDeclarations(
             syl=[
@@ -221,6 +237,58 @@ class TestCrossValidator:
             ),
         )
 
+    def test_reports_bare_string_keyword_arguments(self) -> None:
+        declarations = ParsedDeclarations(
+            syl=[
+                make_template_declaration(
+                    text="!put(key=name, value=123)!",
+                )
+            ]
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.code for violation in report.violations) == (
+            "cross.string_argument_quoted",
+        )
+        assert tuple(violation.context for violation in report.violations) == (
+            "function='put', argument='key', value='name', scope=syl",
+        )
+
+    def test_ignores_calls_without_string_argument_violations(self) -> None:
+        declarations = ParsedDeclarations(
+            syl=[
+                make_template_declaration(
+                    text=(
+                        "!(lambda: 1)()!"
+                        "!helper(name)!"
+                        "!color.interpolate("
+                        "progress, '&H000000&', '&HFFFFFF&'"
+                        ")!"
+                        "!put(key='name', value=value)!"
+                        "!put('name', 1, extra)!"
+                    ),
+                )
+            ]
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert report.violations == ()
+
+    def test_ignores_invalid_inline_python_for_string_arguments(self) -> None:
+        declarations = ParsedDeclarations(
+            syl=[
+                make_template_declaration(
+                    text="!put(!",
+                )
+            ]
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert report.violations == ()
+
     def test_reports_bare_string_arguments_in_code_declarations(self) -> None:
         declarations = ParsedDeclarations(
             setup=[
@@ -248,6 +316,27 @@ class TestCrossValidator:
             ),
         )
 
+    def test_reports_bare_string_arguments_in_word_code_declarations(
+        self,
+    ) -> None:
+        declarations = ParsedDeclarations(
+            word=[
+                make_code_declaration(
+                    source="value = put(name, 1)",
+                    scope=Scope.WORD,
+                )
+            ]
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.code for violation in report.violations) == (
+            "cross.string_argument_quoted",
+        )
+        assert tuple(violation.context for violation in report.violations) == (
+            "function='put', argument='key', value='name', scope=word",
+        )
+
     def test_reports_fx_modifier_outside_syl_scope(self) -> None:
         declarations = ParsedDeclarations(
             line=[
@@ -263,6 +352,19 @@ class TestCrossValidator:
         assert tuple(violation.code for violation in report.violations) == (
             "cross.fx_scope_allowed",
         )
+
+    def test_accepts_fx_modifier_in_syl_scope(self) -> None:
+        declarations = ParsedDeclarations(
+            syl=[
+                make_template_declaration(
+                    modifiers=TemplateModifiers(fx="flash"),
+                )
+            ]
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert report.violations == ()
 
     def test_accepts_mixin_with_compatible_template(self) -> None:
         declarations = ParsedDeclarations(
@@ -302,6 +404,18 @@ class TestCrossValidator:
             "cross.mixin_template_compatible",
         )
 
+    def test_reports_mixin_when_template_style_does_not_match(self) -> None:
+        declarations = ParsedDeclarations(
+            syl=[make_template_declaration(style="Alt")],
+            mixin_syl=[make_mixin_declaration()],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.code for violation in report.violations) == (
+            "cross.mixin_template_compatible",
+        )
+
     def test_reports_mixin_variable_used_outside_scope(self) -> None:
         declarations = ParsedDeclarations(
             line=[make_template_declaration(scope=Scope.LINE)],
@@ -318,6 +432,23 @@ class TestCrossValidator:
 
 
 class TestDocumentValidator:
+    def test_validates_all_declaration_buckets(self) -> None:
+        declarations = ParsedDeclarations(
+            line=[make_template_declaration(scope=Scope.LINE)],
+            word=[make_template_declaration(scope=Scope.WORD)],
+            syl=[make_template_declaration(scope=Scope.SYL)],
+            char=[make_template_declaration(scope=Scope.CHAR)],
+            mixin_line=[make_mixin_declaration(scope=Scope.LINE)],
+            mixin_word=[make_mixin_declaration(scope=Scope.WORD)],
+            mixin_syl=[make_mixin_declaration(scope=Scope.SYL)],
+            mixin_char=[make_mixin_declaration(scope=Scope.CHAR)],
+            setup=[make_code_declaration(scope=Scope.SETUP)],
+        )
+
+        report = DocumentValidator().validate(make_document(), declarations)
+
+        assert report.violations == ()
+
     def test_aggregates_cross_rule_violations(self) -> None:
         document = make_document(events=[make_event(style="Missing")])
         declarations = ParsedDeclarations(

@@ -8,7 +8,11 @@ from pykara.data import Event, Metadata, Style, Syllable
 from pykara.declaration import Scope
 from pykara.declaration.code import CodeBody
 from pykara.declaration.mixin import MixinBody, MixinModifiers
-from pykara.declaration.template import TemplateBody, TemplateModifiers
+from pykara.declaration.template import (
+    LoopDescriptor,
+    TemplateBody,
+    TemplateModifiers,
+)
 from pykara.parsing import (
     CodeDeclaration,
     MixinDeclaration,
@@ -382,6 +386,25 @@ class TestTemplateRules:
 
         assert CompatibleTemplateModifierScopeRule().check(declaration) is None
 
+    def test_modifier_scope_rule_accepts_all_compatible_modifiers(
+        self,
+    ) -> None:
+        declaration = replace(
+            make_template_declaration(),
+            modifiers=TemplateModifiers(
+                loops=(LoopDescriptor(name="spark", iterations=2),),
+                no_blank=True,
+                no_merge=True,
+                no_text=True,
+                fx="flash",
+                styles="selected_styles",
+                when="enabled",
+                unless="muted",
+            ),
+        )
+
+        assert CompatibleTemplateModifierScopeRule().check(declaration) is None
+
     def test_modifier_scope_rule_reports_incompatible_modifier(self) -> None:
         declaration = replace(
             make_template_declaration(),
@@ -456,6 +479,23 @@ class TestMixinRules:
     def test_mixin_allowed_scope_rule_accepts_valid_mixin(self) -> None:
         assert MixinAllowedScopeRule().check(make_mixin_declaration()) is None
 
+    def test_mixin_allowed_scope_rule_reports_invalid_mixin(self) -> None:
+        violation = MixinAllowedScopeRule().check(
+            replace(make_mixin_declaration(), scope=Scope.SETUP)
+        )
+
+        assert violation is not None
+        assert violation.code == "mixin.scope_allowed"
+        assert violation.severity is Severity.ERROR
+
+    def test_mixin_python_expression_rule_accepts_python_expression(
+        self,
+    ) -> None:
+        assert (
+            MixinPythonExpressionSyntaxRule().check(make_mixin_declaration())
+            is None
+        )
+
     def test_mixin_python_expression_rule_reports_unsupported_syntax(
         self,
     ) -> None:
@@ -469,6 +509,22 @@ class TestMixinRules:
         assert violation is not None
         assert violation.code == "mixin.expression_python_only"
         assert violation.severity is Severity.ERROR
+
+    def test_mixin_modifier_scope_rule_accepts_compatible_modifiers(
+        self,
+    ) -> None:
+        declaration = replace(
+            make_mixin_declaration(),
+            modifiers=MixinModifiers(
+                prepend=True,
+                layer=2,
+                for_actor="lead",
+                when="enabled",
+                unless="muted",
+            ),
+        )
+
+        assert CompatibleMixinModifierScopeRule().check(declaration) is None
 
     def test_mixin_modifier_scope_rule_reports_incompatible_modifier(
         self,

@@ -8,6 +8,15 @@ import pytest
 
 from pykara.declaration._shared import ModifierRegistry
 from pykara.declaration.code import CodeBody, CodeModifiers, CodeStylesModifier
+from pykara.declaration.mixin import (
+    ForModifier,
+    LayerModifier,
+    MixinFxModifier,
+    MixinModifiers,
+    MixinUnlessModifier,
+    MixinWhenModifier,
+    PrependModifier,
+)
 from pykara.declaration.template import (
     TEMPLATE_MODIFIER_REGISTRY,
     FxModifier,
@@ -199,6 +208,92 @@ class TestCodeStylesModifier:
         assert exc_info.value.modifier == "styles"
 
 
+class TestMixinModifiers:
+    def test_prepend_sets_flag_and_consumes_nothing(self) -> None:
+        modifier = PrependModifier()
+        current = MixinModifiers()
+
+        result, remaining = modifier.apply(["layer", "2"], current)
+
+        assert result == replace(current, prepend=True)
+        assert remaining == ["layer", "2"]
+
+    def test_layer_parses_integer_and_consumes_token(self) -> None:
+        modifier = LayerModifier()
+        current = MixinModifiers()
+
+        result, remaining = modifier.apply(["2", "for", "actor"], current)
+
+        assert result == replace(current, layer=2)
+        assert remaining == ["for", "actor"]
+
+    def test_layer_raises_without_argument(self) -> None:
+        with pytest.raises(ModifierParseError) as exc_info:
+            LayerModifier().apply([], MixinModifiers())
+
+        assert exc_info.value.modifier == "layer"
+
+    def test_layer_rejects_non_integer(self) -> None:
+        with pytest.raises(ModifierParseError) as exc_info:
+            LayerModifier().apply(["top"], MixinModifiers())
+
+        assert exc_info.value.modifier == "layer"
+
+    def test_for_parses_actor_and_consumes_token(self) -> None:
+        modifier = ForModifier()
+        current = MixinModifiers()
+
+        result, remaining = modifier.apply(["Singer", "fx", "flash"], current)
+
+        assert result == replace(current, for_actor="Singer")
+        assert remaining == ["fx", "flash"]
+
+    def test_for_raises_without_argument(self) -> None:
+        with pytest.raises(ModifierParseError) as exc_info:
+            ForModifier().apply([], MixinModifiers())
+
+        assert exc_info.value.modifier == "for"
+
+    def test_fx_parses_name_and_consumes_token(self) -> None:
+        modifier = MixinFxModifier()
+        current = MixinModifiers()
+
+        result, remaining = modifier.apply(["flash", "prepend"], current)
+
+        assert result == replace(current, fx="flash")
+        assert remaining == ["prepend"]
+
+    def test_fx_raises_without_argument(self) -> None:
+        with pytest.raises(ModifierParseError) as exc_info:
+            MixinFxModifier().apply([], MixinModifiers())
+
+        assert exc_info.value.modifier == "fx"
+
+    def test_when_parses_parenthesized_expression(self) -> None:
+        modifier = MixinWhenModifier()
+        current = MixinModifiers()
+
+        result, remaining = modifier.apply(
+            ["(line.actor", "==", '"lead")', "prepend"],
+            current,
+        )
+
+        assert result == replace(current, when='(line.actor == "lead")')
+        assert remaining == ["prepend"]
+
+    def test_unless_parses_parenthesized_expression(self) -> None:
+        modifier = MixinUnlessModifier()
+        current = MixinModifiers()
+
+        result, remaining = modifier.apply(
+            ["(syl.i", "==", "0)", "layer", "2"],
+            current,
+        )
+
+        assert result == replace(current, unless="(syl.i == 0)")
+        assert remaining == ["layer", "2"]
+
+
 class TestWhenModifier:
     def test_parses_single_token_condition(self) -> None:
         modifier = WhenModifier()
@@ -227,6 +322,15 @@ class TestWhenModifier:
     def test_raises_without_argument(self) -> None:
         with pytest.raises(ModifierParseError) as exc_info:
             WhenModifier().apply([], TemplateModifiers())
+
+        assert exc_info.value.modifier == "when"
+
+    def test_raises_for_unclosed_parenthesized_expression(self) -> None:
+        with pytest.raises(ModifierParseError) as exc_info:
+            WhenModifier().apply(
+                ["(line.actor", "==", '"red"', "fx"],
+                TemplateModifiers(),
+            )
 
         assert exc_info.value.modifier == "when"
 
