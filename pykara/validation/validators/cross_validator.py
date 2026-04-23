@@ -6,6 +6,7 @@ from collections.abc import Iterable
 
 from pykara.adapters import SubtitleDocument
 from pykara.parsing import (
+    CodeDeclaration,
     MixinDeclaration,
     ParsedDeclarations,
     TemplateDeclaration,
@@ -13,13 +14,17 @@ from pykara.parsing import (
 from pykara.validation.reports import ValidationReport, Violation
 from pykara.validation.rules.cross_rules import (
     AllowedVariableScopeRule,
+    BareStringArgumentReference,
     EventStyleReference,
     ExistingStyleRule,
     FxModifierScopeRule,
     FxModifierUsage,
     MixinTemplateCompatibilityRule,
     MixinTemplateReference,
+    QuotedStringArgumentRule,
     TemplateVariableReference,
+    iter_bare_string_argument_references,
+    iter_code_bare_string_argument_references,
     iter_template_variables,
 )
 
@@ -30,6 +35,7 @@ class CrossValidator:
     def __init__(self) -> None:
         self._style_rule = ExistingStyleRule()
         self._variable_scope_rule = AllowedVariableScopeRule()
+        self._quoted_string_argument_rule = QuotedStringArgumentRule()
         self._fx_scope_rule = FxModifierScopeRule()
         self._mixin_template_rule = MixinTemplateCompatibilityRule()
 
@@ -51,6 +57,7 @@ class CrossValidator:
             *self._validate_style_references(document),
             *self._validate_template_variables(declarations),
             *self._validate_mixin_variables(declarations),
+            *self._validate_quoted_string_arguments(declarations),
             *self._validate_fx_usage(declarations),
             *self._validate_mixin_template_usage(declarations),
         )
@@ -110,6 +117,19 @@ class CrossValidator:
                     FxModifierUsage(declaration=declaration)
                 )
             )
+            is not None
+        )
+
+    def _validate_quoted_string_arguments(
+        self,
+        declarations: ParsedDeclarations,
+    ) -> tuple[Violation, ...]:
+        return tuple(
+            violation
+            for reference in self._iter_bare_string_argument_references(
+                declarations
+            )
+            if (violation := self._quoted_string_argument_rule.check(reference))
             is not None
         )
 
@@ -177,3 +197,36 @@ class CrossValidator:
         yield from declarations.mixin_word
         yield from declarations.mixin_syl
         yield from declarations.mixin_char
+
+    def _iter_bare_string_argument_references(
+        self,
+        declarations: ParsedDeclarations,
+    ) -> Iterable[BareStringArgumentReference]:
+        for declaration in (
+            *self._iter_template_declarations(declarations),
+            *self._iter_mixin_declarations(declarations),
+            *self._iter_code_declarations(declarations),
+        ):
+            if isinstance(declaration, CodeDeclaration):
+                yield from iter_code_bare_string_argument_references(
+                    declaration
+                )
+            else:
+                yield from iter_bare_string_argument_references(declaration)
+
+    def _iter_code_declarations(
+        self,
+        declarations: ParsedDeclarations,
+    ) -> Iterable[CodeDeclaration]:
+        yield from declarations.setup
+        for declaration in declarations.line:
+            if isinstance(declaration, CodeDeclaration):
+                yield declaration
+
+        for declaration in declarations.syl:
+            if isinstance(declaration, CodeDeclaration):
+                yield declaration
+
+        for declaration in declarations.word:
+            if isinstance(declaration, CodeDeclaration):
+                yield declaration

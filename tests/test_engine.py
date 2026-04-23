@@ -1628,6 +1628,26 @@ class TestEngineIntegration:
             "0-2",
         ]
 
+    def test_set_and_lock_reject_bare_key_names(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("!set(name, 123)!!lock(name, 123)!"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(no_text=True),
+                ),
+            ]
+        )
+
+        with pytest.raises(TemplateRuntimeError):
+            engine.apply(
+                [make_single_syllable_event()],
+                declarations,
+                Metadata(res_x=1920, res_y=1080),
+                {"Default": make_style()},
+            )
+
     def test_set_rejects_keys_locked_by_template(self) -> None:
         engine = build_engine()
         declarations = ParsedDeclarations(

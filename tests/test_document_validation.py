@@ -169,6 +169,85 @@ class TestCrossValidator:
             "cross.variable_scope_allowed",
         )
 
+    def test_accepts_quoted_string_arguments(self) -> None:
+        declarations = ParsedDeclarations(
+            syl=[
+                make_template_declaration(
+                    text=(
+                        "!set('name', 123)!!lock('name', 123)!"
+                        "!get('name')!"
+                        "!color.interpolate(0.5, '&H000000&', '&HFFFFFF&')!"
+                    ),
+                )
+            ]
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert report.violations == ()
+
+    def test_reports_bare_string_arguments(self) -> None:
+        declarations = ParsedDeclarations(
+            syl=[
+                make_template_declaration(
+                    text=(
+                        "!set(name, 123)!!lock(name, 123)!!get(name)!"
+                        "!color.interpolate(0.5, red, blue)!"
+                    ),
+                )
+            ]
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.code for violation in report.violations) == (
+            "cross.string_argument_quoted",
+            "cross.string_argument_quoted",
+            "cross.string_argument_quoted",
+            "cross.string_argument_quoted",
+            "cross.string_argument_quoted",
+        )
+        assert tuple(violation.context for violation in report.violations) == (
+            "function='set', argument='key', value='name', scope=syl",
+            "function='lock', argument='key', value='name', scope=syl",
+            "function='get', argument='key', value='name', scope=syl",
+            (
+                "function='color.interpolate', argument='start_color', "
+                "value='red', scope=syl"
+            ),
+            (
+                "function='color.interpolate', argument='end_color', "
+                "value='blue', scope=syl"
+            ),
+        )
+
+    def test_reports_bare_string_arguments_in_code_declarations(self) -> None:
+        declarations = ParsedDeclarations(
+            setup=[
+                make_code_declaration(
+                    source="value = color.interpolate(0.5, red, blue)",
+                    scope=Scope.SETUP,
+                )
+            ]
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.code for violation in report.violations) == (
+            "cross.string_argument_quoted",
+            "cross.string_argument_quoted",
+        )
+        assert tuple(violation.context for violation in report.violations) == (
+            (
+                "function='color.interpolate', argument='start_color', "
+                "value='red', scope=setup"
+            ),
+            (
+                "function='color.interpolate', argument='end_color', "
+                "value='blue', scope=setup"
+            ),
+        )
+
     def test_reports_fx_modifier_outside_syl_scope(self) -> None:
         declarations = ParsedDeclarations(
             line=[

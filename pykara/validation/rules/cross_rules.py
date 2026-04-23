@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import ast
 import re
 from dataclasses import dataclass
 
 from pykara.data import Event
-from pykara.parsing import MixinDeclaration, TemplateDeclaration
+from pykara.parsing import (
+    CodeDeclaration,
+    MixinDeclaration,
+    TemplateDeclaration,
+)
 from pykara.specification import (
+    FUNCTION_SPECIFICATIONS,
     MODIFIER_SPECIFICATIONS,
     SCOPE_SPECIFICATIONS,
     VARIABLE_SPECIFICATIONS,
@@ -15,6 +21,53 @@ from pykara.specification import (
 from pykara.validation.reports import Severity, Violation
 
 _TEMPLATE_VARIABLE_PATTERN = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*)")
+_TEMPLATE_EXPRESSION_PATTERN = re.compile(r"!(.+?)!", re.DOTALL)
+
+
+@dataclass(frozen=True, slots=True)
+class _StringArgumentSpec:
+    positional_names: tuple[str, ...]
+    keyword_names: frozenset[str]
+
+
+def _string_argument_specs() -> dict[str, _StringArgumentSpec]:
+    specs: dict[str, _StringArgumentSpec] = {}
+    for function_name, specification in FUNCTION_SPECIFICATIONS.items():
+        try:
+            arguments = specification.signature.split("(", 1)[1].rsplit(
+                ")",
+                1,
+            )[0]
+        except IndexError:
+            continue
+
+        positional_names: list[str] = []
+        keyword_names: set[str] = set()
+        for argument in arguments.split(","):
+            argument = argument.strip()
+            if ":" not in argument:
+                positional_names.append("")
+                continue
+            argument_name, annotation = argument.split(":", 1)
+            argument_name = argument_name.strip()
+            annotation = annotation.split("=", 1)[0].strip()
+            positional_names.append(argument_name)
+            if (
+                annotation == "str"
+                or "str |" in annotation
+                or "| str" in annotation
+            ):
+                keyword_names.add(argument_name)
+
+        if keyword_names:
+            specs[function_name] = _StringArgumentSpec(
+                positional_names=tuple(positional_names),
+                keyword_names=frozenset(keyword_names),
+            )
+    return specs
+
+
+_STRING_ARGUMENT_SPECS = _string_argument_specs()
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,6 +84,16 @@ class TemplateVariableReference:
 
     declaration: TemplateDeclaration | MixinDeclaration
     variable_name: str
+
+
+@dataclass(frozen=True, slots=True)
+class BareStringArgumentReference:
+    """One string function argument written as a bare name."""
+
+    declaration: TemplateDeclaration | MixinDeclaration | CodeDeclaration
+    function_name: str
+    argument_name: str
+    value_name: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,6 +117,110 @@ def iter_template_variables(
     """Return all `$var` references found inside a template or mixin body."""
 
     return tuple(_TEMPLATE_VARIABLE_PATTERN.findall(declaration.body.text))
+
+
+def iter_bare_string_argument_references(
+    declaration: TemplateDeclaration | MixinDeclaration,
+) -> tuple[BareStringArgumentReference, ...]:
+    """Return function calls that use bare names for string arguments."""
+
+    references: list[BareStringArgumentReference] = []
+    for expression in _TEMPLATE_EXPRESSION_PATTERN.findall(
+        declaration.body.text
+    ):
+        normalized_expression = _TEMPLATE_VARIABLE_PATTERN.sub(
+            lambda match: f"__pykara_var_{match.group(1)}",
+            expression,
+        )
+        try:
+            tree = ast.parse(normalized_expression, mode="eval")
+        except SyntaxError:
+            continue
+
+        references.extend(
+            _bare_string_argument_references_from_tree(
+                declaration,
+                tree,
+            )
+        )
+    return tuple(references)
+
+
+def iter_code_bare_string_argument_references(
+    declaration: CodeDeclaration,
+) -> tuple[BareStringArgumentReference, ...]:
+    """Return code calls that use bare names for string arguments."""
+
+    try:
+        tree = ast.parse(declaration.body.source, mode="exec")
+    except SyntaxError:
+        return ()
+
+    return tuple(
+        _bare_string_argument_references_from_tree(
+            declaration,
+            tree,
+        )
+    )
+
+
+def _bare_string_argument_references_from_tree(
+    declaration: TemplateDeclaration | MixinDeclaration | CodeDeclaration,
+    tree: ast.AST,
+) -> list[BareStringArgumentReference]:
+    references: list[BareStringArgumentReference] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        function_name = _call_name(node.func)
+        if function_name is None:
+            continue
+        function_spec = _STRING_ARGUMENT_SPECS.get(function_name)
+        if function_spec is None:
+            continue
+
+        for index, argument in enumerate(node.args):
+            if not isinstance(argument, ast.Name):
+                continue
+            if index >= len(function_spec.positional_names):
+                continue
+            argument_name = function_spec.positional_names[index]
+            if argument_name not in function_spec.keyword_names:
+                continue
+            references.append(
+                BareStringArgumentReference(
+                    declaration=declaration,
+                    function_name=function_name,
+                    argument_name=argument_name,
+                    value_name=argument.id,
+                )
+            )
+
+        for keyword in node.keywords:
+            if keyword.arg not in function_spec.keyword_names:
+                continue
+            if not isinstance(keyword.value, ast.Name):
+                continue
+            references.append(
+                BareStringArgumentReference(
+                    declaration=declaration,
+                    function_name=function_name,
+                    argument_name=keyword.arg,
+                    value_name=keyword.value.id,
+                )
+            )
+    return references
+
+
+def _call_name(node: ast.expr) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        base_name = _call_name(node.value)
+        if base_name is None:
+            return None
+        return f"{base_name}.{node.attr}"
+    return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,6 +273,28 @@ class AllowedVariableScopeRule:
             context=(
                 f"variable=${subject.variable_name}, "
                 f"group={variable_specification.group}, "
+                f"scope={subject.declaration.scope.value}"
+            ),
+            location="declaration.body",
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class QuotedStringArgumentRule:
+    """Ensure string function arguments are written as strings."""
+
+    code: str = "cross.string_argument_quoted"
+    severity: Severity = Severity.ERROR
+
+    def check(self, subject: BareStringArgumentReference) -> Violation | None:
+        return Violation(
+            severity=self.severity,
+            code=self.code,
+            message="String function arguments must be quoted.",
+            context=(
+                f"function={subject.function_name!r}, "
+                f"argument={subject.argument_name!r}, "
+                f"value={subject.value_name!r}, "
                 f"scope={subject.declaration.scope.value}"
             ),
             location="declaration.body",
