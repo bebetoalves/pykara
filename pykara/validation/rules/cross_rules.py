@@ -26,6 +26,7 @@ from pykara.validation.reports import Severity, Violation
 
 _TEMPLATE_VARIABLE_PATTERN = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*)")
 _TEMPLATE_EXPRESSION_PATTERN = re.compile(r"!(.+?)!", re.DOTALL)
+_SPECIAL_CODE_VARIABLE_NAMES = frozenset({"__seed__"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,7 +142,9 @@ def iter_code_declared_variables(
     except SyntaxError:
         return ()
 
-    return tuple(sorted(collect_assigned_names(tree)))
+    return tuple(
+        sorted(collect_assigned_names(tree) - _SPECIAL_CODE_VARIABLE_NAMES)
+    )
 
 
 def iter_code_variable_references(

@@ -447,6 +447,24 @@ class TestCrossValidator:
             "variable='word_unused', scope=word",
         )
 
+    def test_ignores_dunderseed_for_unused_code_variable_warnings(
+        self,
+    ) -> None:
+        declarations = ParsedDeclarations(
+            setup=[
+                make_code_declaration(
+                    source="__seed__ = 7\nunused = 1",
+                    scope=Scope.SETUP,
+                )
+            ],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.context for violation in report.warnings) == (
+            "variable='unused', scope=setup",
+        )
+
     def test_tracks_import_function_and_class_declarations(
         self,
     ) -> None:

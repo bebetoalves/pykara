@@ -1,0 +1,365 @@
+{
+  "cases": [
+    {
+      "id": "valid_modifiers_mixins_scopes",
+      "fixture": "tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass",
+      "args": ["--seed", "1"],
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["ok: 16 fx line(s)"],
+        "fx_texts": [
+          "PW:TW:W0",
+          "{\\blur2}{\\an5}N",
+          "{\\blur2}{\\an5}o",
+          "{\\blur2}{\\an5}",
+          "PW:TW:W1",
+          "{\\blur2}{\\an5}F",
+          "{\\blur2}{\\an5}X",
+          "PL::ILTL:L1:Alt:1",
+          "TW:W0",
+          "{\\an5}H",
+          "{\\an5}i",
+          "PS:TS:S1:0",
+          "PS:TS:S1:1",
+          "{\\an5}A",
+          "{\\an5}l",
+          "{\\an5}l"
+        ],
+        "fx_layers": [0, 3, 3, 3, 0, 3, 3, 2, 0, 3, 3, 0, 0, 3, 3, 3]
+      }
+    },
+    {
+      "id": "valid_function_matrix",
+      "fixture": "tests/fixtures/cli_acceptance/valid_function_matrix.ass",
+      "args": ["--seed", "1"],
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["ok: 1 fx line(s)"],
+        "fx_texts": [
+          "FN:3:4:3.0:2.5:0.50:0.50:10:-10:&H00030201&:&H0C&:&H00000080&:P:P:L:L:m 0 0 l 0 -2 l 2 -2 l 2 0:m 1 2 l 3 2 l 3 4 l 1 4:m 4 5 l 6 5 l 6 7 l 4 7:m 8 20 l 12 20 l 12 17 l 8 17 m 8 23 l 12 23:6:0.94787"
+        ]
+      }
+    },
+    {
+      "id": "valid_function_matrix_json",
+      "fixture": "tests/fixtures/cli_acceptance/valid_function_matrix.ass",
+      "args": ["--seed", "1", "--json", "{json_output}"],
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["ok: 1 fx line(s)"],
+        "fx_texts": [
+          "FN:3:4:3.0:2.5:0.50:0.50:10:-10:&H00030201&:&H0C&:&H00000080&:P:P:L:L:m 0 0 l 0 -2 l 2 -2 l 2 0:m 1 2 l 3 2 l 3 4 l 1 4:m 4 5 l 6 5 l 6 7 l 4 7:m 8 20 l 12 20 l 12 17 l 8 17 m 8 23 l 12 23:6:0.94787"
+        ],
+        "json_fx_texts": [
+          "FN:3:4:3.0:2.5:0.50:0.50:10:-10:&H00030201&:&H0C&:&H00000080&:P:P:L:L:m 0 0 l 0 -2 l 2 -2 l 2 0:m 1 2 l 3 2 l 3 4 l 1 4:m 4 5 l 6 5 l 6 7 l 4 7:m 8 20 l 12 20 l 12 17 l 8 17 m 8 23 l 12 23:6:0.94787"
+        ]
+      }
+    },
+    {
+      "id": "valid_function_matrix_font_dir",
+      "fixture": "tests/fixtures/cli_acceptance/valid_function_matrix.ass",
+      "args": ["--seed", "1", "--font-dir", "tests/fixtures/fonts"],
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["ok: 1 fx line(s)"],
+        "fx_texts": [
+          "FN:3:4:3.0:2.5:0.50:0.50:10:-10:&H00030201&:&H0C&:&H00000080&:P:P:L:L:m 0 0 l 0 -2 l 2 -2 l 2 0:m 1 2 l 3 2 l 3 4 l 1 4:m 4 5 l 6 5 l 6 7 l 4 7:m 8 20 l 12 20 l 12 17 l 8 17 m 8 23 l 12 23:6:0.94787"
+        ]
+      }
+    },
+    {
+      "id": "valid_styles_reference",
+      "fixture": "tests/fixtures/cli_acceptance/valid_styles_reference.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["ok: 2 fx line(s)"],
+        "fx_texts": ["A:red:A,B", "B:blue:A,B"]
+      }
+    },
+    {
+      "id": "valid_cli_seed_reseed",
+      "fixture": "tests/fixtures/cli_acceptance/valid_cli_seed_reseed.ass",
+      "args": ["--seed", "42"],
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["ok: 1 fx line(s)"],
+        "fx_texts": ["82:42"]
+      }
+    },
+    {
+      "id": "valid_retime_matrix",
+      "fixture": "tests/fixtures/cli_acceptance/valid_retime_matrix.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["ok: 13 fx line(s)"],
+        "fx_texts": ["LINE", "PRE", "POST", "PS", "SYL", "POS", "S2S", "S2E", "PS", "SYL", "POS", "S2S", "S2E"],
+        "fx_times": [[1010, 1620], [960, 990], [1610, 1640], [950, 990], [1010, 1220], [1210, 1250], [1010, 1020], [1230, 1640], [1150, 1190], [1210, 1620], [1610, 1650], [1010, 1220], [1630, 1640]]
+      }
+    },
+    {
+      "id": "valid_store_lock_mixins",
+      "fixture": "tests/fixtures/cli_acceptance/valid_store_lock_mixins.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["ok: 10 fx line(s)"],
+        "fx_texts": ["<LL>LTLINE", "<Wgo >go TWORD", "<Sgo >go TSYL", "<Cg>g{\\an5}", "<Co>o{\\an5}", "<C > {\\an5}", "<Wal>alTWORD", "<Sal>alTSYL", "<Ca>a{\\an5}", "<Cl>l{\\an5}"],
+        "fx_layers": [0, 0, 0, 1, 1, 1, 0, 0, 1, 1]
+      }
+    },
+    {
+      "id": "valid_loops_conditions",
+      "fixture": "tests/fixtures/cli_acceptance/valid_loops_conditions.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["ok: 5 fx line(s)"],
+        "fx_texts": ["L:0/2:0/2", "L:0/2:1/2", "L:1/2:0/2", "L:1/2:1/2", "U:al"]
+      }
+    },
+    {
+      "id": "valid_styles_all_override",
+      "fixture": "tests/fixtures/cli_acceptance/valid_styles_all_override.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["ok: 1 fx line(s)"],
+        "fx_texts": ["Kanji:漢"],
+        "fx_styles": ["Kanji"]
+      }
+    },
+    {
+      "id": "invalid_mixin_all_selector",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_mixin_all_selector.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 1,
+        "stderr_contains": ["'all' is not allowed for mixin declarations"]
+      }
+    },
+    {
+      "id": "invalid_template_missing_scope",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_template_missing_scope.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 1,
+        "stderr_contains": ["requires an explicit scope"]
+      }
+    },
+    {
+      "id": "invalid_code_char_scope",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_code_char_scope.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 1,
+        "stderr_contains": ["Scope 'char' is not allowed for 'code'"]
+      }
+    },
+    {
+      "id": "invalid_mixin_loop_modifier",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_mixin_loop_modifier.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 1,
+        "stderr_contains": ["Unexpected token after mixin scope: 'loop'"]
+      }
+    },
+    {
+      "id": "invalid_callable_expression",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_callable_expression.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 1,
+        "stderr_contains": ["did you forget to call the function?"]
+      }
+    },
+    {
+      "id": "invalid_loop_mixed_named_unnamed",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_loop_mixed_named_unnamed.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 1,
+        "stderr_contains": ["cannot mix unnamed and named loop declarations"]
+      }
+    },
+    {
+      "id": "invalid_template_fx_scope",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_template_fx_scope.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "template.modifier_scope_compatible",
+          "cross.fx_scope_allowed"
+        ]
+      }
+    },
+    {
+      "id": "invalid_variable_scope",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_variable_scope.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": ["cross.variable_scope_allowed"]
+      }
+    },
+    {
+      "id": "invalid_styles_not_tuple",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_styles_not_tuple.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 1,
+        "stderr_contains": ["styles modifier must resolve to a tuple of style names"]
+      }
+    },
+    {
+      "id": "invalid_styles_tuple_non_string",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_styles_tuple_non_string.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 1,
+        "stderr_contains": ["styles modifier tuple must contain only style names"]
+      }
+    },
+    {
+      "id": "invalid_styles_missing_style",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_styles_missing_style.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 1,
+        "stderr_contains": ["references unknown style 'Missing'"]
+      }
+    },
+    {
+      "id": "invalid_styles_single_name",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_styles_single_name.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 1,
+        "stderr_contains": ["styles modifier must resolve to a tuple of style names"]
+      }
+    },
+    {
+      "id": "invalid_locked_store_put",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_locked_store_put.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 1,
+        "stderr_contains": ["key is locked"]
+      }
+    },
+    {
+      "id": "invalid_multiple_retime_calls",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_multiple_retime_calls.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 1,
+        "stderr_contains": ["only one retime call is allowed per template"]
+      }
+    },
+    {
+      "id": "invalid_bare_string_argument",
+      "fixture": "tests/fixtures/cli_acceptance/invalid_bare_string_argument.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": ["cross.string_argument_quoted"]
+      }
+    },
+    {
+      "id": "warn_unused_code_variable",
+      "fixture": "tests/fixtures/cli_acceptance/warn_unused_code_variable.ass",
+      "args": [],
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["ok: 1 fx line(s)"],
+        "stderr_contains": ["cross.code_variable_used"],
+        "fx_texts": ["&H00AAFF&"]
+      }
+    },
+    {
+      "id": "warn_only_invalid_event_time",
+      "fixture": "tests/fixtures/cli_acceptance/warn_only_invalid_event_time.ass",
+      "args": ["--warn-only"],
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["ok: 1 fx line(s)"],
+        "stderr_contains": ["warning [event.time_order]"],
+        "fx_texts": ["ok"]
+      }
+    }
+  ],
+  "coverage_inventory": {
+    "declarations": {
+      "template:line": ["tests/fixtures/acceptance/basic_04_show_one_object_per_line.ass"],
+      "template:word": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass", "tests/fixtures/cli_acceptance/valid_store_lock_mixins.ass"],
+      "template:syl": ["tests/fixtures/acceptance/basic_02_appear_left2right_syl.ass", "tests/fixtures/cli_acceptance/valid_loops_conditions.ass"],
+      "template:char": ["tests/fixtures/acceptance/basic_03_appear_left2right_char.ass", "tests/fixtures/cli_acceptance/valid_store_lock_mixins.ass"],
+      "mixin:line": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass", "tests/fixtures/cli_acceptance/valid_store_lock_mixins.ass"],
+      "mixin:word": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass", "tests/fixtures/cli_acceptance/valid_store_lock_mixins.ass"],
+      "mixin:syl": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass", "tests/fixtures/cli_acceptance/valid_store_lock_mixins.ass"],
+      "mixin:char": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass", "tests/fixtures/cli_acceptance/valid_store_lock_mixins.ass"],
+      "code:setup": ["tests/fixtures/acceptance/basic_04_show_one_object_per_line.ass"],
+      "code:line": ["tests/fixtures/acceptance/basic_09_vertical_karaoke.ass"],
+      "code:word": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass"],
+      "code:syl": ["tests/fixtures/acceptance/basic_06_random_color_code_line.ass"]
+    },
+    "modifiers": {
+      "template:loop": ["tests/fixtures/acceptance/advanced_01_shad_trick_frz.ass", "tests/fixtures/cli_acceptance/valid_loops_conditions.ass"],
+      "template:no_blank": ["tests/fixtures/acceptance/basic_07_moving_object_between_syl.ass"],
+      "template:no_merge": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass"],
+      "template:no_text": ["tests/fixtures/acceptance/basic_04_show_one_object_per_line.ass"],
+      "template:fx": ["tests/fixtures/acceptance/basic_11_apply_different_fx_to_specific_syl_inline_fx.ass"],
+      "template:styles": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass", "tests/fixtures/cli_acceptance/valid_styles_reference.ass", "tests/fixtures/cli_acceptance/valid_styles_all_override.ass"],
+      "template:when": ["tests/fixtures/acceptance/basic_13_apply_different_fx_to_specific_line_fxgroup.ass", "tests/fixtures/cli_acceptance/valid_loops_conditions.ass"],
+      "template:unless": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass", "tests/fixtures/cli_acceptance/valid_loops_conditions.ass"],
+      "mixin:prepend": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass"],
+      "mixin:layer": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass"],
+      "mixin:for": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass"],
+      "mixin:fx": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass"],
+      "mixin:when": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass"],
+      "mixin:unless": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass"],
+      "code:styles": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass", "tests/fixtures/cli_acceptance/valid_styles_reference.ass"]
+    },
+    "functions": {
+      "retime": ["tests/fixtures/acceptance/basic_12_apply_different_fx_to_specific_line_simple_method.ass", "tests/fixtures/cli_acceptance/valid_retime_matrix.ass"],
+      "layer.set": ["tests/fixtures/acceptance/advanced_01_shad_trick_frz.ass"],
+      "get": ["tests/fixtures/acceptance/basic_05_random_color_store_function.ass", "tests/fixtures/cli_acceptance/valid_function_matrix.ass", "tests/fixtures/cli_acceptance/valid_store_lock_mixins.ass"],
+      "put": ["tests/fixtures/acceptance/basic_05_random_color_store_function.ass", "tests/fixtures/cli_acceptance/valid_function_matrix.ass", "tests/fixtures/cli_acceptance/valid_store_lock_mixins.ass"],
+      "lock": ["tests/fixtures/cli_acceptance/valid_function_matrix.ass", "tests/fixtures/cli_acceptance/valid_store_lock_mixins.ass"],
+      "color.rgb_to_ass": ["tests/fixtures/acceptance/basic_25_code_line_function2.ass", "tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "color.alpha": ["tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "color.interpolate": ["tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "coord.polar": ["tests/fixtures/acceptance/advanced_07_chanbara.ass", "tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "coord.round": ["tests/fixtures/acceptance/advanced_07_chanbara.ass", "tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "shape.rotate": ["tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "shape.center_at": ["tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "shape.displace": ["tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "shape.split_clip": ["tests/fixtures/acceptance/advanced_07_chanbara.ass", "tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "math.floor": ["tests/fixtures/acceptance/basic_24_code_line_function1.ass", "tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "math.ceil": ["tests/fixtures/acceptance/advanced_01_shad_trick_frz.ass", "tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "math.sqrt": ["tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "math.fabs": ["tests/fixtures/acceptance/basic_25_code_line_function2.ass", "tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "math.sin": ["tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "math.cos": ["tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "math.radians": ["tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "random.random": ["tests/fixtures/acceptance/basic_24_code_line_function1.ass", "tests/fixtures/cli_acceptance/valid_function_matrix.ass"],
+      "random.randint": ["tests/fixtures/acceptance/basic_06_random_color_code_line.ass", "tests/fixtures/cli_acceptance/valid_function_matrix.ass", "tests/fixtures/cli_acceptance/valid_cli_seed_reseed.ass"]
+    },
+    "variable_groups": {
+      "template_vars": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass"],
+      "line_vars": ["tests/fixtures/acceptance/basic_04_show_one_object_per_line.ass"],
+      "word_vars": ["tests/fixtures/cli_acceptance/valid_modifiers_mixins_scopes.ass"],
+      "syl_vars": ["tests/fixtures/acceptance/basic_02_appear_left2right_syl.ass"],
+      "char_vars": ["tests/fixtures/acceptance/basic_03_appear_left2right_char.ass"]
+    },
+    "cli_flags": {
+      "--seed": ["case:valid_modifiers_mixins_scopes", "case:valid_cli_seed_reseed"],
+      "--json": ["case:valid_function_matrix_json"],
+      "--warn-only": ["case:warn_only_invalid_event_time"],
+      "--font-dir": ["case:valid_function_matrix_font_dir"]
+    }
+  }
+}

@@ -87,3 +87,7 @@ def main() -> int:
 
     print(f"ok: {len(fx_events)} fx line(s) written to '{args.output}'")
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
