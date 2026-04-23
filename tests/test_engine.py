@@ -12,6 +12,7 @@ from types import CodeType
 import pytest
 
 from pykara.data import Event, Metadata, Style
+from pykara.data.events.karaoke import Syllable, Word
 from pykara.declaration import Scope
 from pykara.declaration.code import CodeBody, CodeModifiers
 from pykara.declaration.mixin import MixinBody, MixinModifiers
@@ -21,8 +22,9 @@ from pykara.declaration.template import (
     TemplateModifiers,
 )
 from pykara.engine.engine import Engine, _CodeRunner
-from pykara.engine.variable_context import Environment
+from pykara.engine.variable_context import Environment, GeneratedLine
 from pykara.errors import (
+    BoundMethodInExpressionError,
     ReservedNameError,
     TemplateCodeError,
     TemplateRuntimeError,
@@ -161,6 +163,53 @@ def make_single_syllable_event() -> Event:
         margin_r=0,
         margin_t=0,
         margin_b=0,
+    )
+
+
+def make_positioned_syllable(
+    text: str = "go",
+    *,
+    index: int = 0,
+    style: Style | None = None,
+    left: float = 100.0,
+    width: float | None = None,
+    x: float | None = None,
+    tag: str = "",
+    inline_fx: str = "",
+) -> Syllable:
+    resolved_width = float(len(text) * 10) if width is None else width
+    trimmed = text.strip()
+    prespace = text[: len(text) - len(text.lstrip(" \t"))]
+    postspace = text[len(text.rstrip(" \t")) :]
+    right = left + resolved_width
+    center = left + resolved_width / 2
+    return Syllable(
+        index=index,
+        raw_text=text,
+        text=text,
+        trimmed_text=trimmed,
+        prespace=prespace,
+        postspace=postspace,
+        start_time=0,
+        end_time=100,
+        duration=100,
+        kdur=10.0,
+        tag=tag,
+        inline_fx=inline_fx,
+        highlights=[],
+        style=style,
+        width=resolved_width,
+        height=20.0,
+        prespacewidth=float(len(prespace) * 10),
+        postspacewidth=float(len(postspace) * 10),
+        left=left,
+        center=center,
+        right=right,
+        top=0.0,
+        middle=10.0,
+        bottom=20.0,
+        x=center if x is None else x,
+        y=10.0,
     )
 
 
@@ -331,11 +380,32 @@ class TestCodeRunner:
         with pytest.raises(TemplateCodeError):
             runner.run("def broken(: pass", make_env())
 
+    def test_raises_template_code_error_when_compile_rejects_ast(
+        self,
+    ) -> None:
+        runner = _CodeRunner()
+
+        with pytest.raises(TemplateCodeError):
+            runner.run("return 1", make_env())
+
     def test_raises_template_runtime_error_on_execution_failure(self) -> None:
         runner = _CodeRunner()
 
         with pytest.raises(TemplateRuntimeError):
             runner.run("1 / 0", make_env())
+
+    def test_reraises_bound_method_expression_errors(self) -> None:
+        runner = _CodeRunner()
+        env = make_env()
+        env.user_namespace["BoundMethodInExpressionError"] = (
+            BoundMethodInExpressionError
+        )
+
+        with pytest.raises(BoundMethodInExpressionError):
+            runner.run(
+                "raise BoundMethodInExpressionError('retime.syl', 'function')",
+                env,
+            )
 
     def test_rejects_assignment_to_reserved_name(self) -> None:
         runner = _CodeRunner()
@@ -382,6 +452,345 @@ class TestCodeRunner:
         ]
         assert env.user_namespace["unique"] == {1, 2}
         assert env.user_namespace["total"] == 12
+
+    def test_collects_assigned_names_from_complex_python_bindings(
+        self,
+    ) -> None:
+        runner = _CodeRunner()
+
+        names = runner._assigned_names(
+            "decorator = lambda value: value\n"
+            "class Base: pass\n"
+            "@decorator\n"
+            "class Built(Base, metaclass=type): pass\n"
+            "@decorator\n"
+            "async def coro() -> int:\n"
+            "    return 1\n"
+            "try:\n"
+            "    raise ValueError()\n"
+            "except ValueError as caught:\n"
+            "    handled = caught\n"
+            "values = [item for item in range(3) if item]\n"
+            "unique = {item for item in range(3) if item}\n"
+            "mapping = {key: value for key, value in [(1, 2)] if key}\n"
+            "import os as operating_system\n"
+        )
+
+        assert {
+            "decorator",
+            "Base",
+            "Built",
+            "coro",
+            "caught",
+            "handled",
+            "values",
+            "unique",
+            "mapping",
+            "operating_system",
+        } <= names
+
+
+class TestEngineInternalBranches:
+    def test_loop_expression_errors_are_wrapped(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("loop"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(
+                        no_text=True,
+                        loops=(
+                            LoopDescriptor(
+                                name="i",
+                                iterations="missing_name",
+                            ),
+                        ),
+                    ),
+                )
+            ]
+        )
+
+        with pytest.raises(TemplateRuntimeError):
+            engine.apply(
+                [make_single_syllable_event()],
+                declarations,
+                Metadata(res_x=1920, res_y=1080),
+                {"Default": make_style()},
+            )
+
+    def test_loop_expression_unexpected_errors_are_wrapped(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        engine = build_engine()
+
+        class BrokenRenderer:
+            def render(self, text: str, env: Environment) -> str:
+                del text, env
+                raise ValueError("broken renderer")
+
+        monkeypatch.setattr(engine, "_renderer", BrokenRenderer())
+
+        with pytest.raises(TemplateRuntimeError):
+            engine._resolve_loop_iterations("broken", make_env())
+
+    def test_loop_expression_must_resolve_positive(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("loop"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(
+                        no_text=True,
+                        loops=(
+                            LoopDescriptor(
+                                name="i",
+                                iterations="0",
+                            ),
+                        ),
+                    ),
+                )
+            ]
+        )
+
+        with pytest.raises(TemplateRuntimeError):
+            engine.apply(
+                [make_single_syllable_event()],
+                declarations,
+                Metadata(res_x=1920, res_y=1080),
+                {"Default": make_style()},
+            )
+
+    def test_current_reference_style_defaults_to_event_style(self) -> None:
+        engine = build_engine()
+        env = make_env()
+
+        assert (
+            engine._current_reference_style_name(make_event(), env) == "Default"
+        )
+
+    def test_styles_modifier_rejects_non_string_tuple_items(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody('my_styles = ("Default", 123)'),
+                    scope=Scope.SETUP,
+                )
+            ],
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("body"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(styles="my_styles"),
+                )
+            ],
+        )
+
+        with pytest.raises(TemplateRuntimeError):
+            engine.apply(
+                [make_event()],
+                declarations,
+                Metadata(res_x=1920, res_y=1080),
+                {"Default": make_style()},
+            )
+
+    def test_char_syllables_are_empty_without_style(self) -> None:
+        engine = build_engine()
+        env = make_env()
+
+        assert (
+            engine._iter_char_syllables(
+                env,
+                make_positioned_syllable("go", style=None),
+            )
+            == ()
+        )
+
+    def test_empty_syllable_collection_has_no_words(self) -> None:
+        assert build_engine()._iter_words(()) == []
+
+    def test_word_template_no_blank_skips_blank_word(self) -> None:
+        engine = build_engine()
+        blank_syllable = make_positioned_syllable("  ", style=make_style())
+        blank_word = Word(
+            index=0,
+            syllables=(blank_syllable,),
+            raw_text="  ",
+            text="  ",
+            trimmed_text="",
+            prespace="",
+            postspace="  ",
+            start_time=0,
+            end_time=100,
+            duration=100,
+            kdur=10.0,
+        )
+
+        assert (
+            engine._render_word_template(
+                TemplateDeclaration(
+                    body=TemplateBody("blank"),
+                    scope=Scope.WORD,
+                    modifiers=TemplateModifiers(no_blank=True),
+                ),
+                make_event(),
+                ParsedDeclarations(),
+                blank_word,
+                make_env(),
+            )
+            == []
+        )
+
+    def test_unsplittable_untimed_syllable_is_preserved(self) -> None:
+        engine = build_engine()
+        syllable = make_positioned_syllable("solo", style=make_style())
+
+        assert list(engine._split_untimed_word_syllable(syllable)) == [syllable]
+
+    def test_syllable_x_scale_falls_back_to_one(self) -> None:
+        engine = build_engine()
+        zero_width_engine = Engine(
+            LinePreprocessor(FakeExtentsProvider({"zero": 0.0})),
+            seed=1,
+        )
+
+        assert (
+            engine._resolve_syllable_x_scale(
+                make_positioned_syllable("", style=make_style())
+            )
+            == 1.0
+        )
+        assert (
+            engine._resolve_syllable_x_scale(
+                make_positioned_syllable("zero", style=None)
+            )
+            == 1.0
+        )
+        assert (
+            zero_width_engine._resolve_syllable_x_scale(
+                make_positioned_syllable("zero", style=make_style(), width=10.0)
+            )
+            == 1.0
+        )
+
+    def test_segment_anchor_keeps_source_alignment_edge(self) -> None:
+        engine = build_engine()
+        left_aligned = make_positioned_syllable(left=10.0, width=40.0, x=10.0)
+        right_aligned = make_positioned_syllable(left=10.0, width=40.0, x=50.0)
+
+        assert (
+            engine._resolve_segment_anchor_x(left_aligned, 1.0, 2.0, 3.0) == 1.0
+        )
+        assert (
+            engine._resolve_segment_anchor_x(right_aligned, 1.0, 2.0, 3.0)
+            == 3.0
+        )
+
+    def test_mixin_filter_false_paths(self) -> None:
+        engine = build_engine()
+        env = make_env()
+        env.line = GeneratedLine.from_event(make_event(), make_style())
+        env.line.layer = 1
+        env.syl = make_positioned_syllable(
+            "go",
+            style=make_style(),
+            inline_fx="main",
+        )
+        template = TemplateDeclaration(
+            body=TemplateBody("T"),
+            scope=Scope.SYL,
+            actor="lead",
+            modifiers=TemplateModifiers(),
+        )
+        source_event = make_event()
+
+        assert not engine._mixin_applies_to_template(
+            mixin=MixinDeclaration(
+                body=MixinBody("M"),
+                scope=Scope.LINE,
+                modifiers=MixinModifiers(),
+            ),
+            template=template,
+            source_event=source_event,
+            env=env,
+        )
+        assert not engine._mixin_applies_to_template(
+            mixin=MixinDeclaration(
+                body=MixinBody("M"),
+                scope=Scope.SYL,
+                style="Other",
+                modifiers=MixinModifiers(),
+            ),
+            template=template,
+            source_event=source_event,
+            env=env,
+        )
+        assert not engine._mixin_applies_to_template(
+            mixin=MixinDeclaration(
+                body=MixinBody("M"),
+                scope=Scope.SYL,
+                modifiers=MixinModifiers(fx="alt"),
+            ),
+            template=template,
+            source_event=source_event,
+            env=env,
+        )
+        assert not engine._mixin_applies_to_template(
+            mixin=MixinDeclaration(
+                body=MixinBody("M"),
+                scope=Scope.SYL,
+                modifiers=MixinModifiers(when="False"),
+            ),
+            template=template,
+            source_event=source_event,
+            env=env,
+        )
+
+    def test_mixin_style_filter_uses_source_style_for_styles_templates(
+        self,
+    ) -> None:
+        engine = build_engine()
+        source_event = make_event()
+        template = TemplateDeclaration(
+            body=TemplateBody("T"),
+            scope=Scope.SYL,
+            modifiers=TemplateModifiers(styles="my_styles"),
+        )
+
+        assert engine._mixin_applies_to_style(
+            mixin=MixinDeclaration(
+                body=MixinBody("M"),
+                scope=Scope.SYL,
+                style="Default",
+                modifiers=MixinModifiers(),
+            ),
+            template=template,
+            source_event=source_event,
+        )
+
+    def test_mixin_conditions_can_fail_for_when_and_unless(self) -> None:
+        engine = build_engine()
+        env = make_env()
+
+        assert not engine._passes_mixin_conditions(
+            MixinDeclaration(
+                body=MixinBody("M"),
+                scope=Scope.LINE,
+                modifiers=MixinModifiers(when="False"),
+            ),
+            env,
+        )
+        assert not engine._passes_mixin_conditions(
+            MixinDeclaration(
+                body=MixinBody("M"),
+                scope=Scope.LINE,
+                modifiers=MixinModifiers(unless="True"),
+            ),
+            env,
+        )
 
 
 class TestEngineIntegration:
@@ -1012,6 +1421,124 @@ class TestEngineIntegration:
 
         assert [(result.style, result.text) for result in results] == [
             ("Kanji", "Kanji:漢"),
+        ]
+
+    def test_skips_declarations_with_mismatched_style_reference_and_condition(
+        self,
+    ) -> None:
+        engine = build_engine()
+        event = Event(
+            text=r"{\k10}  {\k20}go",
+            effect="karaoke",
+            style="Default",
+            layer=0,
+            start_time=1000,
+            end_time=1300,
+            comment=False,
+            actor="Singer",
+            margin_l=0,
+            margin_r=0,
+            margin_t=0,
+            margin_b=0,
+        )
+        declarations = ParsedDeclarations(
+            setup=[
+                CodeDeclaration(
+                    body=CodeBody('other_styles = ("Alt",)'),
+                    scope=Scope.SETUP,
+                )
+            ],
+            line=[
+                TemplateDeclaration(
+                    body=TemplateBody("bad-line-reference"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(
+                        styles="other_styles",
+                        no_text=True,
+                    ),
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("L"),
+                    scope=Scope.LINE,
+                    modifiers=TemplateModifiers(no_text=True),
+                ),
+            ],
+            word=[
+                TemplateDeclaration(
+                    body=TemplateBody("bad-word-style"),
+                    scope=Scope.WORD,
+                    style="Other",
+                    modifiers=TemplateModifiers(),
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("bad-word-reference"),
+                    scope=Scope.WORD,
+                    modifiers=TemplateModifiers(styles="other_styles"),
+                ),
+                CodeDeclaration(
+                    body=CodeBody("last_word = word.trimmed_text"),
+                    scope=Scope.WORD,
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("bad-word-condition"),
+                    scope=Scope.WORD,
+                    modifiers=TemplateModifiers(when="False"),
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("W!last_word!:"),
+                    scope=Scope.WORD,
+                    modifiers=TemplateModifiers(no_blank=True),
+                ),
+            ],
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("bad-syl-reference"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(styles="other_styles"),
+                )
+            ],
+            char=[
+                TemplateDeclaration(
+                    body=TemplateBody("bad-char-style"),
+                    scope=Scope.CHAR,
+                    style="Other",
+                    modifiers=TemplateModifiers(),
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("bad-char-reference"),
+                    scope=Scope.CHAR,
+                    modifiers=TemplateModifiers(styles="other_styles"),
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("bad-char-condition"),
+                    scope=Scope.CHAR,
+                    modifiers=TemplateModifiers(when="False"),
+                ),
+                TemplateDeclaration(
+                    body=TemplateBody("C$char_i:"),
+                    scope=Scope.CHAR,
+                    modifiers=TemplateModifiers(
+                        when="char.text.strip() != ''",
+                    ),
+                ),
+            ],
+        )
+
+        results = engine.apply(
+            [event],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {
+                "Default": make_style(),
+                "Alt": make_style("Alt"),
+            },
+        )
+
+        assert [result.text for result in results] == [
+            "L",
+            "Wgo:  go",
+            "C2:g",
+            "C3:o",
         ]
 
     def test_styles_modifier_rejects_single_style_name(self) -> None:
