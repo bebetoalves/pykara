@@ -18,6 +18,10 @@ from pykara.specification import (
     SCOPE_SPECIFICATIONS,
     VARIABLE_SPECIFICATIONS,
 )
+from pykara.support.code_analysis import (
+    collect_assigned_names,
+    collect_loaded_names,
+)
 from pykara.validation.reports import Severity, Violation
 
 _TEMPLATE_VARIABLE_PATTERN = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*)")
@@ -97,6 +101,14 @@ class BareStringArgumentReference:
 
 
 @dataclass(frozen=True, slots=True)
+class CodeVariableDeclaration:
+    """One user-facing variable declared by a code declaration."""
+
+    declaration: CodeDeclaration
+    variable_name: str
+
+
+@dataclass(frozen=True, slots=True)
 class FxModifierUsage:
     """One declaration using the fx modifier."""
 
@@ -117,6 +129,103 @@ def iter_template_variables(
     """Return all `$var` references found inside a template or mixin body."""
 
     return tuple(_TEMPLATE_VARIABLE_PATTERN.findall(declaration.body.text))
+
+
+def iter_code_declared_variables(
+    declaration: CodeDeclaration,
+) -> tuple[str, ...]:
+    """Return user namespace names declared by one code declaration."""
+
+    try:
+        tree = ast.parse(declaration.body.source, mode="exec")
+    except SyntaxError:
+        return ()
+
+    return tuple(sorted(collect_assigned_names(tree)))
+
+
+def iter_code_variable_references(
+    declaration: CodeDeclaration,
+) -> tuple[str, ...]:
+    """Return Python names read by one code declaration."""
+
+    try:
+        tree = ast.parse(declaration.body.source, mode="exec")
+    except SyntaxError:
+        return ()
+
+    references = set(collect_loaded_names(tree))
+    if declaration.modifiers.styles is not None:
+        references.add(declaration.modifiers.styles)
+    return tuple(sorted(references))
+
+
+def iter_template_code_variable_references(
+    declaration: TemplateDeclaration | MixinDeclaration,
+) -> tuple[str, ...]:
+    """Return code variable references from a template-like declaration."""
+
+    references = set(iter_template_variables(declaration))
+    for expression in _TEMPLATE_EXPRESSION_PATTERN.findall(
+        declaration.body.text
+    ):
+        references.update(_iter_expression_variable_references(expression))
+
+    references.update(_iter_modifier_variable_references(declaration))
+    return tuple(sorted(references))
+
+
+def _iter_expression_variable_references(expression: str) -> tuple[str, ...]:
+    normalized_expression = _TEMPLATE_VARIABLE_PATTERN.sub(
+        lambda match: f"__pykara_var_{match.group(1)}",
+        expression,
+    )
+    try:
+        tree = ast.parse(normalized_expression, mode="eval")
+    except SyntaxError:
+        return ()
+
+    loaded_names = collect_loaded_names(tree)
+    return tuple(
+        name
+        for name in sorted(loaded_names)
+        if not name.startswith("__pykara_var_")
+    )
+
+
+def _iter_modifier_variable_references(
+    declaration: TemplateDeclaration | MixinDeclaration,
+) -> tuple[str, ...]:
+    references: set[str] = set()
+
+    if isinstance(declaration, TemplateDeclaration):
+        modifiers = declaration.modifiers
+        if modifiers.styles is not None:
+            references.add(modifiers.styles)
+        for loop in modifiers.loops:
+            if isinstance(loop.iterations, str):
+                references.update(
+                    _iter_expression_variable_references(loop.iterations)
+                )
+
+        if modifiers.when is not None:
+            references.update(
+                _iter_expression_variable_references(modifiers.when)
+            )
+        if modifiers.unless is not None:
+            references.update(
+                _iter_expression_variable_references(modifiers.unless)
+            )
+        return tuple(sorted(references))
+
+    modifiers = declaration.modifiers
+    if modifiers.when is not None:
+        references.update(_iter_expression_variable_references(modifiers.when))
+    if modifiers.unless is not None:
+        references.update(
+            _iter_expression_variable_references(modifiers.unless)
+        )
+    return tuple(sorted(references))
 
 
 def iter_bare_string_argument_references(
@@ -298,6 +407,33 @@ class QuotedStringArgumentRule:
                 f"scope={subject.declaration.scope.value}"
             ),
             location="declaration.body",
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class UsedCodeVariableRule:
+    """Ensure names declared in code are used by the template document."""
+
+    used_names: frozenset[str]
+    code: str = "cross.code_variable_used"
+    severity: Severity = Severity.WARNING
+
+    def check(self, subject: CodeVariableDeclaration) -> Violation | None:
+        if subject.variable_name in self.used_names:
+            return None
+
+        return Violation(
+            severity=self.severity,
+            code=self.code,
+            message=(
+                f"Code variable {subject.variable_name!r} is declared "
+                "but never used."
+            ),
+            context=(
+                f"variable={subject.variable_name!r}, "
+                f"scope={subject.declaration.scope.value}"
+            ),
+            location="code.body",
         )
 
 

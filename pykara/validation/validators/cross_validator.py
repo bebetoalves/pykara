@@ -15,6 +15,7 @@ from pykara.validation.reports import ValidationReport, Violation
 from pykara.validation.rules.cross_rules import (
     AllowedVariableScopeRule,
     BareStringArgumentReference,
+    CodeVariableDeclaration,
     EventStyleReference,
     ExistingStyleRule,
     FxModifierScopeRule,
@@ -23,8 +24,12 @@ from pykara.validation.rules.cross_rules import (
     MixinTemplateReference,
     QuotedStringArgumentRule,
     TemplateVariableReference,
+    UsedCodeVariableRule,
     iter_bare_string_argument_references,
     iter_code_bare_string_argument_references,
+    iter_code_declared_variables,
+    iter_code_variable_references,
+    iter_template_code_variable_references,
     iter_template_variables,
 )
 
@@ -58,6 +63,7 @@ class CrossValidator:
             *self._validate_template_variables(declarations),
             *self._validate_mixin_variables(declarations),
             *self._validate_quoted_string_arguments(declarations),
+            *self._validate_code_variable_usage(declarations),
             *self._validate_fx_usage(declarations),
             *self._validate_mixin_template_usage(declarations),
         )
@@ -130,6 +136,29 @@ class CrossValidator:
                 declarations
             )
             if (violation := self._quoted_string_argument_rule.check(reference))
+            is not None
+        )
+
+    def _validate_code_variable_usage(
+        self,
+        declarations: ParsedDeclarations,
+    ) -> tuple[Violation, ...]:
+        used_names = frozenset(
+            self._iter_used_code_variable_names(declarations)
+        )
+        rule = UsedCodeVariableRule(used_names=used_names)
+        return tuple(
+            violation
+            for declaration in self._iter_code_declarations(declarations)
+            for variable_name in iter_code_declared_variables(declaration)
+            if (
+                violation := rule.check(
+                    CodeVariableDeclaration(
+                        declaration=declaration,
+                        variable_name=variable_name,
+                    )
+                )
+            )
             is not None
         )
 
@@ -213,6 +242,19 @@ class CrossValidator:
                 )
             else:
                 yield from iter_bare_string_argument_references(declaration)
+
+    def _iter_used_code_variable_names(
+        self,
+        declarations: ParsedDeclarations,
+    ) -> Iterable[str]:
+        for declaration in self._iter_code_declarations(declarations):
+            yield from iter_code_variable_references(declaration)
+
+        for declaration in (
+            *self._iter_template_declarations(declarations),
+            *self._iter_mixin_declarations(declarations),
+        ):
+            yield from iter_template_code_variable_references(declaration)
 
     def _iter_code_declarations(
         self,

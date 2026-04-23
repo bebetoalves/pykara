@@ -39,82 +39,9 @@ from pykara.processing.line_preprocessor import (
 )
 from pykara.processing.text_renderer import TextRenderer
 from pykara.support.ass_tags import merge_adjacent_override_blocks
+from pykara.support.code_analysis import collect_assigned_names
 
 _PLAIN_WORD_PATTERN = re.compile(r"[ \t]*[^ \t]+")
-
-
-class _AssignedNameCollector(ast.NodeVisitor):
-    """Collect module-scope names bound by a code declaration."""
-
-    def __init__(self) -> None:
-        self.names: set[str] = set()
-
-    def _visit_function_definition(
-        self,
-        node: ast.FunctionDef | ast.AsyncFunctionDef,
-    ) -> None:
-        self.names.add(node.name)
-        for decorator in node.decorator_list:
-            self.visit(decorator)
-        if node.returns is not None:
-            self.visit(node.returns)
-
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        self._visit_function_definition(node)
-
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-        self._visit_function_definition(node)
-
-    def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        self.names.add(node.name)
-        for decorator in node.decorator_list:
-            self.visit(decorator)
-        for base in node.bases:
-            self.visit(base)
-        for keyword in node.keywords:
-            self.visit(keyword)
-
-    def visit_Name(self, node: ast.Name) -> None:
-        if isinstance(node.ctx, ast.Store):
-            self.names.add(node.id)
-
-    def visit_alias(self, node: ast.alias) -> None:
-        self.names.add(node.asname or node.name.split(".", 1)[0])
-
-    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
-        if node.name is not None:
-            self.names.add(node.name)
-        if node.type is not None:
-            self.visit(node.type)
-        for statement in node.body:
-            self.visit(statement)
-
-    def _visit_comprehension(
-        self,
-        node: ast.ListComp | ast.SetComp | ast.GeneratorExp,
-    ) -> None:
-        self.visit(node.elt)
-        for generator in node.generators:
-            self.visit(generator.iter)
-            for condition in generator.ifs:
-                self.visit(condition)
-
-    def visit_ListComp(self, node: ast.ListComp) -> None:
-        self._visit_comprehension(node)
-
-    def visit_SetComp(self, node: ast.SetComp) -> None:
-        self._visit_comprehension(node)
-
-    def visit_GeneratorExp(self, node: ast.GeneratorExp) -> None:
-        self._visit_comprehension(node)
-
-    def visit_DictComp(self, node: ast.DictComp) -> None:
-        self.visit(node.key)
-        self.visit(node.value)
-        for generator in node.generators:
-            self.visit(generator.iter)
-            for condition in generator.ifs:
-                self.visit(condition)
 
 
 class _CodeRunner:
@@ -183,9 +110,7 @@ class _CodeRunner:
                 tree = ast.parse(source, filename="<pykara-code>", mode="exec")
             except SyntaxError as error:
                 raise TemplateCodeError(source, error) from error
-            collector = _AssignedNameCollector()
-            collector.visit(tree)
-            assigned_names = frozenset(collector.names)
+            assigned_names = collect_assigned_names(tree)
             self._assigned_name_cache[source] = assigned_names
         return assigned_names
 

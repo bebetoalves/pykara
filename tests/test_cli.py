@@ -287,6 +287,50 @@ class TestCli:
         assert result == 0
         assert "warning [W001]: a harmless warning" in captured.err
 
+    def test_prints_unused_code_variable_name_in_warning(
+        self,
+        tmp_path: Path,
+        monkeypatch: MonkeyPatch,
+        capsys: CaptureFixture[str],
+    ) -> None:
+        input_path = tmp_path / "unused_code_var.ass"
+        output_path = tmp_path / "unused_code_var_output.ass"
+        write_ass(input_path)
+
+        warning_report = ValidationReport(
+            violations=(
+                Violation(
+                    severity=Severity.WARNING,
+                    code="cross.code_variable_used",
+                    message=(
+                        "Code variable 'accent' is declared but never used."
+                    ),
+                    context="variable='accent', scope=setup",
+                ),
+            ),
+        )
+
+        def fake_run_validation(
+            *_args: object,
+            **_kwargs: object,
+        ) -> ValidationReport:
+            return warning_report
+
+        monkeypatch.setattr(cli_main, "run_validation", fake_run_validation)
+        monkeypatch.setattr(
+            "sys.argv",
+            ["pykara", str(input_path), str(output_path)],
+        )
+
+        result = main()
+        captured = capsys.readouterr()
+
+        assert result == 0
+        assert (
+            "warning [cross.code_variable_used]: Code variable 'accent' "
+            "is declared but never used."
+        ) in captured.err
+
     def test_returns_two_on_validation_error_during_engine(
         self,
         tmp_path: Path,

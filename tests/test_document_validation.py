@@ -5,16 +5,20 @@ from __future__ import annotations
 from pykara.adapters import SubtitleDocument
 from pykara.data import Event, Metadata, Style
 from pykara.declaration import Scope
-from pykara.declaration.code import CodeBody
+from pykara.declaration.code import CodeBody, CodeModifiers
 from pykara.declaration.mixin import MixinBody, MixinModifiers
-from pykara.declaration.template import TemplateBody, TemplateModifiers
+from pykara.declaration.template import (
+    LoopDescriptor,
+    TemplateBody,
+    TemplateModifiers,
+)
 from pykara.parsing import (
     CodeDeclaration,
     MixinDeclaration,
     ParsedDeclarations,
     TemplateDeclaration,
 )
-from pykara.validation.reports import ValidationReport
+from pykara.validation.reports import Severity, ValidationReport
 from pykara.validation.validators import CrossValidator, DocumentValidator
 
 
@@ -301,11 +305,11 @@ class TestCrossValidator:
 
         report = CrossValidator().validate(make_document(), declarations)
 
-        assert tuple(violation.code for violation in report.violations) == (
+        assert tuple(violation.code for violation in report.errors) == (
             "cross.string_argument_quoted",
             "cross.string_argument_quoted",
         )
-        assert tuple(violation.context for violation in report.violations) == (
+        assert tuple(violation.context for violation in report.errors) == (
             (
                 "function='color.interpolate', argument='start_color', "
                 "value='red', scope=setup"
@@ -330,12 +334,220 @@ class TestCrossValidator:
 
         report = CrossValidator().validate(make_document(), declarations)
 
-        assert tuple(violation.code for violation in report.violations) == (
+        assert tuple(violation.code for violation in report.errors) == (
             "cross.string_argument_quoted",
         )
-        assert tuple(violation.context for violation in report.violations) == (
+        assert tuple(violation.context for violation in report.errors) == (
             "function='put', argument='key', value='name', scope=word",
         )
+
+    def test_reports_unused_code_variables_as_warnings(self) -> None:
+        declarations = ParsedDeclarations(
+            setup=[
+                make_code_declaration(
+                    source=(
+                        "accent = '&H00AAFF&'\n"
+                        "derived = accent\n"
+                        "unused = 1"
+                    ),
+                    scope=Scope.SETUP,
+                )
+            ],
+            syl=[
+                make_template_declaration(
+                    text=r"{\1c$accent}!derived!",
+                )
+            ],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.code for violation in report.violations) == (
+            "cross.code_variable_used",
+        )
+        assert report.violations[0].severity is Severity.WARNING
+        assert report.violations[0].message == (
+            "Code variable 'unused' is declared but never used."
+        )
+        assert report.violations[0].context == (
+            "variable='unused', scope=setup"
+        )
+
+    def test_accepts_code_variables_used_by_modifiers_and_mixins(
+        self,
+    ) -> None:
+        declarations = ParsedDeclarations(
+            setup=[
+                make_code_declaration(
+                    source=(
+                        "accent = '&H00AAFF&'\n"
+                        "enabled = True\n"
+                        "repeat_count = 2\n"
+                        "my_styles = ('Default',)"
+                    ),
+                    scope=Scope.SETUP,
+                )
+            ],
+            syl=[
+                make_template_declaration(
+                    modifiers=TemplateModifiers(
+                        loops=(LoopDescriptor("spark", "repeat_count"),),
+                        styles="my_styles",
+                        when="enabled",
+                    ),
+                )
+            ],
+            mixin_syl=[
+                make_mixin_declaration(
+                    text=r"{\1c$accent}!repeat_count!",
+                )
+            ],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert report.violations == ()
+
+    def test_reports_unused_code_variables_from_every_code_scope(
+        self,
+    ) -> None:
+        declarations = ParsedDeclarations(
+            setup=[
+                make_code_declaration(
+                    source="setup_unused = 1",
+                    scope=Scope.SETUP,
+                )
+            ],
+            line=[
+                make_code_declaration(
+                    source="line_unused = 1",
+                    scope=Scope.LINE,
+                )
+            ],
+            word=[
+                make_code_declaration(
+                    source="word_unused = 1",
+                    scope=Scope.WORD,
+                )
+            ],
+            syl=[
+                make_code_declaration(
+                    source="syl_unused = 1",
+                    scope=Scope.SYL,
+                )
+            ],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.context for violation in report.warnings) == (
+            "variable='setup_unused', scope=setup",
+            "variable='line_unused', scope=line",
+            "variable='syl_unused', scope=syl",
+            "variable='word_unused', scope=word",
+        )
+
+    def test_tracks_import_function_and_class_declarations(
+        self,
+    ) -> None:
+        declarations = ParsedDeclarations(
+            setup=[
+                make_code_declaration(
+                    source=(
+                        "import math\n"
+                        "import random as rng\n"
+                        "from pathlib import Path\n"
+                        "class Palette: pass\n"
+                        "def helper(): return math.ceil(1.2)\n"
+                        "async def async_helper(): return rng.randint(1, 2)"
+                    ),
+                    scope=Scope.SETUP,
+                )
+            ],
+            syl=[
+                make_template_declaration(
+                    text="!helper()!-!async_helper!-!Palette!-!Path!",
+                )
+            ],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert report.violations == ()
+
+    def test_ignores_local_function_class_and_comprehension_assignments(
+        self,
+    ) -> None:
+        declarations = ParsedDeclarations(
+            setup=[
+                make_code_declaration(
+                    source=(
+                        "def helper():\n"
+                        "    local_value = 1\n"
+                        "    return [item for item in range(local_value)]\n"
+                        "class Palette:\n"
+                        "    local_attr = 1"
+                    ),
+                    scope=Scope.SETUP,
+                )
+            ],
+            syl=[make_template_declaration(text="!helper!-!Palette!")],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert report.violations == ()
+
+    def test_counts_augmented_assignment_as_code_usage(self) -> None:
+        declarations = ParsedDeclarations(
+            setup=[
+                make_code_declaration(
+                    source="counter = 1\ncounter += 1",
+                    scope=Scope.SETUP,
+                )
+            ],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert report.violations == ()
+
+    def test_uses_code_styles_modifier_as_variable_reference(self) -> None:
+        declarations = ParsedDeclarations(
+            setup=[
+                make_code_declaration(
+                    source="my_styles = ('Default',)",
+                    scope=Scope.SETUP,
+                )
+            ],
+            line=[
+                CodeDeclaration(
+                    body=CodeBody("pass"),
+                    scope=Scope.LINE,
+                    modifiers=CodeModifiers(styles="my_styles"),
+                )
+            ],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert report.violations == ()
+
+    def test_invalid_code_syntax_does_not_add_unused_variable_warning(
+        self,
+    ) -> None:
+        declarations = ParsedDeclarations(
+            setup=[
+                make_code_declaration(
+                    source="broken =",
+                    scope=Scope.SETUP,
+                )
+            ],
+        )
+
+        report = CrossValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.code for violation in report.violations) == ()
 
     def test_reports_fx_modifier_outside_syl_scope(self) -> None:
         declarations = ParsedDeclarations(
@@ -442,7 +654,7 @@ class TestDocumentValidator:
             mixin_word=[make_mixin_declaration(scope=Scope.WORD)],
             mixin_syl=[make_mixin_declaration(scope=Scope.SYL)],
             mixin_char=[make_mixin_declaration(scope=Scope.CHAR)],
-            setup=[make_code_declaration(scope=Scope.SETUP)],
+            setup=[make_code_declaration(source="pass", scope=Scope.SETUP)],
         )
 
         report = DocumentValidator().validate(make_document(), declarations)
