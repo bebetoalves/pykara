@@ -21,7 +21,7 @@ Style: Default,Noto Sans,80,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template char,{\an5\pos($char_center,$char_middle)\t(!set("time",(line.width/2-math.fabs((line.width/2)-(char.center-line.left)))*2)!,!get("time")+100!,\3c&HFFFFFF&)\t(!get("time")+100!,!get("time")+600!,\3c!style.outline_color!)\fad(300,300)}
+Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,template char,{\an5\pos($char_center,$char_middle)\t(!put("time",(line.width/2-math.fabs((line.width/2)-(char.center-line.left)))*2)!,!get("time")+100!,\3c&HFFFFFF&)\t(!get("time")+100!,!get("time")+600!,\3c!style.outline_color!)\fad(300,300)}
 Comment: 0,0:00:01.08,0:00:02.89,Default,,0,0,0,karaoke,Don't be sorry
 Comment: 0,0:00:03.00,0:00:06.27,Default,,0,0,0,karaoke,You can abandon me spitefully and leave
 Comment: 0,0:00:06.83,0:00:10.17,Default,,0,0,0,karaoke,If that's what you want, yeah, good bye

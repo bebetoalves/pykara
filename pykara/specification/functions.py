@@ -42,9 +42,9 @@ FUNCTION_SPECIFICATIONS: dict[str, FunctionSpecification] = {
         "Read one value from the shared store.",
         frozenset({"template"}),
     ),
-    "set": FunctionSpecification(
-        "set",
-        "set(key: str, value: object) -> object",
+    "put": FunctionSpecification(
+        "put",
+        "put(key: str, value: object) -> object",
         "engine",
         "Store one value in the shared store.",
         frozenset({"template"}),

@@ -38,10 +38,10 @@ class GetFunction:
         return typed_env.store.get(key, default_value)
 
 
-class SetFunction:
+class PutFunction:
     """Write one value into the shared store."""
 
-    name: ClassVar[str] = "set"
+    name: ClassVar[str] = "put"
     aliases: ClassVar[tuple[str, ...]] = ()
     applicable_to: ClassVar[frozenset[str]] = frozenset({"template"})
 
@@ -49,7 +49,7 @@ class SetFunction:
         typed_env = cast(_StoreEnvironment, env)
         if key in typed_env.locked_store_keys:
             raise LockedStoreKeyError(key)
-        _raise_if_callable("set", key, value)
+        _raise_if_callable("put", key, value)
         typed_env.store[key] = value
         return value
 

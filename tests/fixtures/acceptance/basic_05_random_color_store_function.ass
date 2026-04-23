@@ -20,7 +20,7 @@ Style: Default,Noto Sans,80,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Comment: 0,0:00:00.00,0:00:00.00,Default,lead-in,0,0,0,template syl,!retime.start2syl(-300,0)!{\an5\pos($syl_center,$syl_middle)\1c!set("color", color.rgb_to_ass(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))!\fad(300,0)}
+Comment: 0,0:00:00.00,0:00:00.00,Default,lead-in,0,0,0,template syl,!retime.start2syl(-300,0)!{\an5\pos($syl_center,$syl_middle)\1c!put("color", color.rgb_to_ass(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))!\fad(300,0)}
 Comment: 1,0:00:00.00,0:00:00.00,Default,hihg-light,0,0,0,template syl,!retime.syl(0,0)!{\an5\pos($syl_center,$syl_middle)\t(0,33,\fscx120\fscy120)\t(33,$syl_dur,\fscx100\fscy100)\1c!get("color")!}
 Comment: 0,0:00:00.00,0:00:00.00,Default,lead-out,0,0,0,template syl,!retime.syl2end(0,300)!{\an5\pos($syl_center,$syl_middle)\1c!get("color")!\fad(0,300)}
 Comment: 0,0:00:17.19,0:00:21.09,Default,,0,0,0,karaoke,{\k36}gol{\k30}mok{\k26}gil {\k48}eul {\k47}do{\k33}l a {\k26}deu{\k47}leo {\k55}ga{\k42}myeon

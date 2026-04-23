@@ -174,7 +174,7 @@ class TestCrossValidator:
             syl=[
                 make_template_declaration(
                     text=(
-                        "!set('name', 123)!!lock('name', 123)!"
+                        "!put('name', 123)!!lock('name', 123)!"
                         "!get('name')!"
                         "!color.interpolate(0.5, '&H000000&', '&HFFFFFF&')!"
                     ),
@@ -191,7 +191,7 @@ class TestCrossValidator:
             syl=[
                 make_template_declaration(
                     text=(
-                        "!set(name, 123)!!lock(name, 123)!!get(name)!"
+                        "!put(name, 123)!!lock(name, 123)!!get(name)!"
                         "!color.interpolate(0.5, red, blue)!"
                     ),
                 )
@@ -208,7 +208,7 @@ class TestCrossValidator:
             "cross.string_argument_quoted",
         )
         assert tuple(violation.context for violation in report.violations) == (
-            "function='set', argument='key', value='name', scope=syl",
+            "function='put', argument='key', value='name', scope=syl",
             "function='lock', argument='key', value='name', scope=syl",
             "function='get', argument='key', value='name', scope=syl",
             (

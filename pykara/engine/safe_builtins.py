@@ -21,6 +21,7 @@ SAFE_BUILTINS = MappingProxyType(
         "range": range,
         "reversed": reversed,
         "round": round,
+        "set": set,
         "sorted": sorted,
         "str": str,
         "sum": sum,

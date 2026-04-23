@@ -32,6 +32,7 @@ Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code setup,steps = list(range(4)
 | `range(...)` | Build an integer range for loops and comprehensions. |
 | `reversed(sequence)` | Iterate over a sequence in reverse order. |
 | `round(value, ndigits=None)` | Round a numeric value. |
+| `set(iterable=())` | Build a set. |
 | `sorted(iterable)` | Return a sorted list. |
 | `str(value)` | Convert a value to text. |
 | `sum(iterable)` | Add numeric values. |
@@ -61,9 +62,8 @@ Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code setup,pairs = list(zip(rang
 
 ## Notes
 
-`set` is not exposed as the Python built-in because Pykara already uses
-`set(key, value)` as a global store function. See
-[`global`](./global.md) for `get`, `set`, and `lock`.
+For Pykara's shared store helpers, see [`global`](./global.md) for
+`get`, `put`, and `lock`.
 
 Unsafe or environment-facing built-ins such as `open`, `eval`, `exec`,
 `compile`, `globals`, `locals`, `vars`, `dir`, `getattr`, `setattr`,

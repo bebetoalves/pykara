@@ -349,14 +349,17 @@ class TestCodeRunner:
         with pytest.raises(ReservedNameError, match="reserved name 'range'"):
             runner.run("range = 3", make_env())
 
-    def test_allows_assignment_to_store_function_names_in_code(self) -> None:
+    def test_allows_assignment_to_template_store_function_names_in_code(
+        self,
+    ) -> None:
         runner = _CodeRunner()
         env = make_env()
 
-        runner.run("get = 1\nset = 2", env)
+        runner.run("get = 1\nput = 2\nlock = 3", env)
 
         assert env.user_namespace["get"] == 1
-        assert env.user_namespace["set"] == 2
+        assert env.user_namespace["put"] == 2
+        assert env.user_namespace["lock"] == 3
 
     def test_exposes_safe_builtins_in_code(self) -> None:
         runner = _CodeRunner()
@@ -365,7 +368,8 @@ class TestCodeRunner:
         runner.run(
             "values = list(range(4))\n"
             "pairs = list(zip(values, reversed(values)))\n"
-            "total = sum(values) + len(pairs)",
+            "unique = set([1, 1, 2])\n"
+            "total = sum(values) + len(pairs) + len(unique)",
             env,
         )
 
@@ -376,7 +380,8 @@ class TestCodeRunner:
             (2, 1),
             (3, 0),
         ]
-        assert env.user_namespace["total"] == 10
+        assert env.user_namespace["unique"] == {1, 2}
+        assert env.user_namespace["total"] == 12
 
 
 class TestEngineIntegration:
@@ -1101,7 +1106,7 @@ class TestEngineIntegration:
             ],
             mixin_syl=[
                 MixinDeclaration(
-                    body=MixinBody("!set('label', syl.text)!"),
+                    body=MixinBody("!put('label', syl.text)!"),
                     scope=Scope.SYL,
                     modifiers=MixinModifiers(),
                 ),
@@ -1413,7 +1418,7 @@ class TestEngineIntegration:
         declarations = ParsedDeclarations(
             line=[
                 CodeDeclaration(
-                    body=CodeBody("set('main', 1)"),
+                    body=CodeBody("put('main', 1)"),
                     scope=Scope.LINE,
                 )
             ]
@@ -1685,12 +1690,12 @@ class TestEngineIntegration:
             "0-2",
         ]
 
-    def test_set_and_lock_reject_bare_key_names(self) -> None:
+    def test_put_and_lock_reject_bare_key_names(self) -> None:
         engine = build_engine()
         declarations = ParsedDeclarations(
             syl=[
                 TemplateDeclaration(
-                    body=TemplateBody("!set(name, 123)!!lock(name, 123)!"),
+                    body=TemplateBody("!put(name, 123)!!lock(name, 123)!"),
                     scope=Scope.SYL,
                     modifiers=TemplateModifiers(no_text=True),
                 ),
@@ -1705,12 +1710,12 @@ class TestEngineIntegration:
                 {"Default": make_style()},
             )
 
-    def test_set_rejects_keys_locked_by_template(self) -> None:
+    def test_put_rejects_keys_locked_by_template(self) -> None:
         engine = build_engine()
         declarations = ParsedDeclarations(
             syl=[
                 TemplateDeclaration(
-                    body=TemplateBody("!lock('picked', 1)!!set('picked', 2)!"),
+                    body=TemplateBody("!lock('picked', 1)!!put('picked', 2)!"),
                     scope=Scope.SYL,
                     modifiers=TemplateModifiers(no_text=True),
                 ),
@@ -2440,7 +2445,7 @@ class TestEngineIntegration:
                 TemplateDeclaration(
                     body=TemplateBody(
                         "!layer.set(3)!"
-                        "!set('picked', random.randint(1, 10))!"
+                        "!put('picked', random.randint(1, 10))!"
                         "!get('picked')!-!line.layer!-"
                         "!retime.syl(10, 20)!S"
                     ),
@@ -2530,12 +2535,12 @@ class TestEngineIntegration:
                 {"Default": make_style()},
             )
 
-    def test_raises_on_callable_saved_by_set(self) -> None:
+    def test_raises_on_callable_saved_by_put(self) -> None:
         engine = build_engine()
         declarations = ParsedDeclarations(
             syl=[
                 TemplateDeclaration(
-                    body=TemplateBody("!set('bad', layer.set)!"),
+                    body=TemplateBody("!put('bad', layer.set)!"),
                     scope=Scope.SYL,
                     modifiers=TemplateModifiers(no_text=True),
                 )

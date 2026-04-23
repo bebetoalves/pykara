@@ -21,9 +21,9 @@ from pykara.engine.functions import (
     LayerSetFunction,
     LockFunction,
     PolarFunction,
+    PutFunction,
     RetimeFunction,
     RoundCoordFunction,
-    SetFunction,
     ShapeCenterAtFunction,
     ShapeDisplaceFunction,
     ShapeRotateFunction,
@@ -241,10 +241,10 @@ class TestStoreFunctions:
 
         assert result == "fallback"
 
-    def test_set_stores_and_returns_value(self) -> None:
+    def test_put_stores_and_returns_value(self) -> None:
         env = DummyEnvironment()
 
-        result = SetFunction()(env, "color", "blue")
+        result = PutFunction()(env, "color", "blue")
 
         assert result == "blue"
         assert env.store["color"] == "blue"
@@ -278,12 +278,12 @@ class TestStoreFunctions:
         assert env.store["color"] == "blue"
         assert env.locked_store_keys == {"color"}
 
-    def test_set_rejects_locked_key(self) -> None:
+    def test_put_rejects_locked_key(self) -> None:
         env = DummyEnvironment()
         LockFunction()(env, "color", "blue")
 
         with pytest.raises(LockedStoreKeyError):
-            SetFunction()(env, "color", "red")
+            PutFunction()(env, "color", "red")
 
 
 class TestColorFunctions:
@@ -401,11 +401,15 @@ class TestDefaultRegistry:
         assert "retime" in namespace
         assert isinstance(namespace["layer"], SimpleNamespace)
         assert "get" in namespace
-        assert "set" in namespace
+        assert "put" in namespace
+        assert "set" not in namespace
         assert "lock" in namespace
         assert isinstance(namespace["color"], SimpleNamespace)
         assert isinstance(namespace["coord"], SimpleNamespace)
         assert isinstance(namespace["shape"], SimpleNamespace)
+        put = cast(Callable[[str, object], object], namespace["put"])
+        assert put("color", "blue") == "blue"
+        assert env.store["color"] == "blue"
         assert namespace["color"].rgb_to_ass(255, 128, 0) == "&H000080FF&"
         assert (
             namespace["color"].rgb_to_ass(red=255, green=128, blue=0)
@@ -449,5 +453,5 @@ class TestDefaultRegistry:
         namespace = FUNCTION_REGISTRY.build_namespace(env, "code")
 
         assert "get" not in namespace
-        assert "set" not in namespace
+        assert "put" not in namespace
         assert "lock" not in namespace
