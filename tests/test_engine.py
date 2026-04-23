@@ -343,6 +343,12 @@ class TestCodeRunner:
         with pytest.raises(ReservedNameError, match="reserved name 'color'"):
             runner.run("color = palette.purple[800]", make_env())
 
+    def test_rejects_assignment_to_safe_builtin_name(self) -> None:
+        runner = _CodeRunner()
+
+        with pytest.raises(ReservedNameError, match="reserved name 'range'"):
+            runner.run("range = 3", make_env())
+
     def test_allows_assignment_to_store_function_names_in_code(self) -> None:
         runner = _CodeRunner()
         env = make_env()
@@ -351,6 +357,26 @@ class TestCodeRunner:
 
         assert env.user_namespace["get"] == 1
         assert env.user_namespace["set"] == 2
+
+    def test_exposes_safe_builtins_in_code(self) -> None:
+        runner = _CodeRunner()
+        env = make_env()
+
+        runner.run(
+            "values = list(range(4))\n"
+            "pairs = list(zip(values, reversed(values)))\n"
+            "total = sum(values) + len(pairs)",
+            env,
+        )
+
+        assert env.user_namespace["values"] == [0, 1, 2, 3]
+        assert env.user_namespace["pairs"] == [
+            (0, 3),
+            (1, 2),
+            (2, 1),
+            (3, 0),
+        ]
+        assert env.user_namespace["total"] == 10
 
 
 class TestEngineIntegration:
@@ -1097,6 +1123,37 @@ class TestEngineIntegration:
         assert [result.text for result in results] == [
             "T:go<go>go",
             "T:al<al>al",
+        ]
+
+    def test_mixin_can_use_safe_builtins(self) -> None:
+        engine = build_engine()
+        declarations = ParsedDeclarations(
+            syl=[
+                TemplateDeclaration(
+                    body=TemplateBody("T:"),
+                    scope=Scope.SYL,
+                    modifiers=TemplateModifiers(),
+                ),
+            ],
+            mixin_syl=[
+                MixinDeclaration(
+                    body=MixinBody("<!sum(range(len(syl.text)))!>"),
+                    scope=Scope.SYL,
+                    modifiers=MixinModifiers(),
+                ),
+            ],
+        )
+
+        results = engine.apply(
+            [make_event()],
+            declarations,
+            Metadata(res_x=1920, res_y=1080),
+            {"Default": make_style()},
+        )
+
+        assert [result.text for result in results] == [
+            "T:<1>go",
+            "T:<1>al",
         ]
 
     def test_mixin_can_read_value_locked_by_template(self) -> None:

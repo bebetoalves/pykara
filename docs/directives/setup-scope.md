@@ -16,6 +16,8 @@ Comment: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,code setup,main = color.rgb_to_a
 
 - Color builders: `color.rgb_to_ass`, `color.alpha`, `color.interpolate`.
 - Modules: `math`, `random`.
+- Safe built-ins: `range`, `len`, `sum`, `min`, `max`, `list`, and the
+  other functions documented in [builtins](../tools/builtins.md).
 
 Line, word, syllable, and character variables are **not** available here.
 

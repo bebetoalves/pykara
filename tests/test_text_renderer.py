@@ -99,6 +99,16 @@ class TestTextRenderer:
 
         assert rendered == r"pos(35,80)37"
 
+    def test_exposes_safe_builtins_in_expressions(self) -> None:
+        renderer = TextRenderer()
+
+        rendered = renderer.render(
+            "!sum(range(4))!-!len(list(enumerate(range(2))))!",
+            make_env(),
+        )
+
+        assert rendered == "6-2"
+
     def test_renders_code_namespace_values_as_variables(self) -> None:
         renderer = TextRenderer()
         env = make_env()

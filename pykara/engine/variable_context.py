@@ -17,6 +17,7 @@ from pykara.declaration import Scope
 from pykara.declaration.template.modifiers import TemplateModifiers
 from pykara.engine.functions import FUNCTION_REGISTRY
 from pykara.engine.palette import palette
+from pykara.engine.safe_builtins import SAFE_BUILTINS
 from pykara.errors import ExecutionAttributeUnavailableError
 from pykara.specification import (
     EXPOSED_MODULES,
@@ -403,6 +404,7 @@ _RESERVED_EXECUTION_NAMES = frozenset(
     {
         *_VAR_CONTEXT_VARIABLE_FIELD_NAMES,
         *EXPOSED_MODULES,
+        *SAFE_BUILTINS,
         "actor",
         "char",
         "layer",
@@ -1135,6 +1137,7 @@ class Environment:
         """Return the closed namespace exposed to execution."""
 
         namespace = dict(self.user_namespace)
+        namespace.update(SAFE_BUILTINS)
         namespace.update(self._exposed_modules())
         self._merge_function_namespace(
             namespace,
