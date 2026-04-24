@@ -58,31 +58,12 @@ class DocumentValidator:
             report = report.merge(self._event_validator.validate(event))
             report = report.merge(self._validate_event_karaoke(event))
 
-        for declaration in declarations.line:
+        for declaration in declarations.iter_scoped_declarations():
             report = report.merge(
                 self._validate_scoped_declaration(declaration)
             )
 
-        for declaration in declarations.syl:
-            report = report.merge(
-                self._validate_scoped_declaration(declaration)
-            )
-
-        for declaration in declarations.char:
-            report = report.merge(
-                self._template_validator.validate(declaration)
-            )
-
-        for declaration in declarations.mixin_line:
-            report = report.merge(self._mixin_validator.validate(declaration))
-
-        for declaration in declarations.mixin_word:
-            report = report.merge(self._mixin_validator.validate(declaration))
-
-        for declaration in declarations.mixin_syl:
-            report = report.merge(self._mixin_validator.validate(declaration))
-
-        for declaration in declarations.mixin_char:
+        for declaration in declarations.iter_mixin_declarations():
             report = report.merge(self._mixin_validator.validate(declaration))
 
         for declaration in declarations.setup:

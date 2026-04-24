@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 from pykara.data import Event
@@ -103,6 +104,39 @@ class ParsedDeclarations:
         default_factory=_empty_mixin_declarations
     )
     active_styles: set[str] = field(default_factory=_empty_active_styles)
+
+    def iter_scoped_declarations(
+        self,
+    ) -> Iterable[TemplateDeclaration | CodeDeclaration]:
+        """Yield template and code declarations in validation order."""
+
+        yield from self.line
+        yield from self.syl
+        yield from self.word
+        yield from self.char
+
+    def iter_template_declarations(self) -> Iterable[TemplateDeclaration]:
+        """Yield all template declarations in validation order."""
+
+        for declaration in self.iter_scoped_declarations():
+            if isinstance(declaration, TemplateDeclaration):
+                yield declaration
+
+    def iter_code_declarations(self) -> Iterable[CodeDeclaration]:
+        """Yield all code declarations in validation order."""
+
+        yield from self.setup
+        for declaration in self.iter_scoped_declarations():
+            if isinstance(declaration, CodeDeclaration):
+                yield declaration
+
+    def iter_mixin_declarations(self) -> Iterable[MixinDeclaration]:
+        """Yield all mixin declarations in scope order."""
+
+        yield from self.mixin_line
+        yield from self.mixin_word
+        yield from self.mixin_syl
+        yield from self.mixin_char
 
 
 class DeclarationParser:

@@ -7,9 +7,7 @@ from collections.abc import Iterable
 from pykara.adapters import SubtitleDocument
 from pykara.parsing import (
     CodeDeclaration,
-    MixinDeclaration,
     ParsedDeclarations,
-    TemplateDeclaration,
 )
 from pykara.validation.reports import ValidationReport, Violation
 from pykara.validation.rules.cross_rules import (
@@ -94,7 +92,7 @@ class CrossValidator:
     ) -> tuple[Violation, ...]:
         return tuple(
             violation
-            for declaration in self._iter_template_declarations(declarations)
+            for declaration in declarations.iter_template_declarations()
             for variable_name in iter_template_variables(declaration)
             if (
                 violation := self._variable_scope_rule.check(
@@ -114,8 +112,8 @@ class CrossValidator:
         return tuple(
             violation
             for declaration in (
-                *self._iter_template_declarations(declarations),
-                *self._iter_mixin_declarations(declarations),
+                *declarations.iter_template_declarations(),
+                *declarations.iter_mixin_declarations(),
             )
             if declaration.modifiers.fx is not None
             if (
@@ -149,7 +147,7 @@ class CrossValidator:
         rule = UsedCodeVariableRule(used_names=used_names)
         return tuple(
             violation
-            for declaration in self._iter_code_declarations(declarations)
+            for declaration in declarations.iter_code_declarations()
             for variable_name in iter_code_declared_variables(declaration)
             if (
                 violation := rule.check(
@@ -168,7 +166,7 @@ class CrossValidator:
     ) -> tuple[Violation, ...]:
         return tuple(
             violation
-            for declaration in self._iter_mixin_declarations(declarations)
+            for declaration in declarations.iter_mixin_declarations()
             for variable_name in iter_template_variables(declaration)
             if (
                 violation := self._variable_scope_rule.check(
@@ -185,10 +183,10 @@ class CrossValidator:
         self,
         declarations: ParsedDeclarations,
     ) -> tuple[Violation, ...]:
-        templates = tuple(self._iter_template_declarations(declarations))
+        templates = tuple(declarations.iter_template_declarations())
         return tuple(
             violation
-            for declaration in self._iter_mixin_declarations(declarations)
+            for declaration in declarations.iter_mixin_declarations()
             if (
                 violation := self._mixin_template_rule.check(
                     MixinTemplateReference(
@@ -200,41 +198,14 @@ class CrossValidator:
             is not None
         )
 
-    def _iter_template_declarations(
-        self,
-        declarations: ParsedDeclarations,
-    ) -> Iterable[TemplateDeclaration]:
-        for declaration in declarations.line:
-            if isinstance(declaration, TemplateDeclaration):
-                yield declaration
-
-        for declaration in declarations.syl:
-            if isinstance(declaration, TemplateDeclaration):
-                yield declaration
-
-        for declaration in declarations.word:
-            if isinstance(declaration, TemplateDeclaration):
-                yield declaration
-
-        yield from declarations.char
-
-    def _iter_mixin_declarations(
-        self,
-        declarations: ParsedDeclarations,
-    ) -> Iterable[MixinDeclaration]:
-        yield from declarations.mixin_line
-        yield from declarations.mixin_word
-        yield from declarations.mixin_syl
-        yield from declarations.mixin_char
-
     def _iter_bare_string_argument_references(
         self,
         declarations: ParsedDeclarations,
     ) -> Iterable[BareStringArgumentReference]:
         for declaration in (
-            *self._iter_template_declarations(declarations),
-            *self._iter_mixin_declarations(declarations),
-            *self._iter_code_declarations(declarations),
+            *declarations.iter_template_declarations(),
+            *declarations.iter_mixin_declarations(),
+            *declarations.iter_code_declarations(),
         ):
             if isinstance(declaration, CodeDeclaration):
                 yield from iter_code_bare_string_argument_references(
@@ -247,28 +218,11 @@ class CrossValidator:
         self,
         declarations: ParsedDeclarations,
     ) -> Iterable[str]:
-        for declaration in self._iter_code_declarations(declarations):
+        for declaration in declarations.iter_code_declarations():
             yield from iter_code_variable_references(declaration)
 
         for declaration in (
-            *self._iter_template_declarations(declarations),
-            *self._iter_mixin_declarations(declarations),
+            *declarations.iter_template_declarations(),
+            *declarations.iter_mixin_declarations(),
         ):
             yield from iter_template_code_variable_references(declaration)
-
-    def _iter_code_declarations(
-        self,
-        declarations: ParsedDeclarations,
-    ) -> Iterable[CodeDeclaration]:
-        yield from declarations.setup
-        for declaration in declarations.line:
-            if isinstance(declaration, CodeDeclaration):
-                yield declaration
-
-        for declaration in declarations.syl:
-            if isinstance(declaration, CodeDeclaration):
-                yield declaration
-
-        for declaration in declarations.word:
-            if isinstance(declaration, CodeDeclaration):
-                yield declaration

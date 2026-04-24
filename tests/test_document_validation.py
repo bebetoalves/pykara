@@ -679,6 +679,22 @@ class TestDocumentValidator:
 
         assert report.violations == ()
 
+    def test_validates_word_code_declarations(self) -> None:
+        declarations = ParsedDeclarations(
+            word=[
+                make_code_declaration(
+                    source="broken =",
+                    scope=Scope.WORD,
+                )
+            ]
+        )
+
+        report = DocumentValidator().validate(make_document(), declarations)
+
+        assert tuple(violation.code for violation in report.violations) == (
+            "code.python_syntax",
+        )
+
     def test_aggregates_cross_rule_violations(self) -> None:
         document = make_document(events=[make_event(style="Missing")])
         declarations = ParsedDeclarations(
