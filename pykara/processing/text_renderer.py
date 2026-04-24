@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from types import CodeType
 
 from pykara.engine.variable_context import Environment
@@ -25,11 +26,18 @@ _ALIAS_EXPRESSION_BY_VARIABLE = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class _TextToken:
+    kind: str
+    value: str
+
+
 class TextRenderer:
     """Render template text by expanding variables and expressions."""
 
     def __init__(self) -> None:
         self._compiled_expression_cache: dict[str, CodeType] = {}
+        self._token_cache: dict[str, tuple[_TextToken, ...]] = {}
 
     def render(self, text: str, env: Environment) -> str:
         """Expand `$var` and `!expr!` in one template string."""
@@ -38,40 +46,83 @@ class TextRenderer:
             return text
 
         rendered: list[str] = []
+        variables: dict[str, object] | None = None
+        for token in self._tokens(text):
+            if token.kind == "literal":
+                rendered.append(token.value)
+                continue
+
+            if token.kind == "variable":
+                if variables is None:
+                    variables = env.variable_dict()
+                rendered.append(
+                    self._replace_variable(
+                        token.value,
+                        text,
+                        variables,
+                    )
+                )
+                continue
+
+            expression = self._render_expression_variables(
+                token.value,
+                text,
+                env,
+            )
+            rendered.append(
+                self._replace_expression(
+                    expression,
+                    env.as_dict(),
+                )
+            )
+            variables = None
+
+        return "".join(rendered)
+
+    def _tokens(self, text: str) -> tuple[_TextToken, ...]:
+        cached = self._token_cache.get(text)
+        if cached is not None:
+            return cached
+
+        tokens: list[_TextToken] = []
+        literal_start = 0
         position = 0
         while position < len(text):
             variable_match = _VARIABLE_PATTERN.match(text, position)
             if variable_match is not None:
-                rendered.append(
-                    self._replace_variable(
-                        variable_match.group(1),
-                        text,
-                        env.variable_dict(),
+                if literal_start < position:
+                    tokens.append(
+                        _TextToken("literal", text[literal_start:position])
                     )
-                )
+                tokens.append(_TextToken("variable", variable_match.group(1)))
                 position = variable_match.end()
+                literal_start = position
                 continue
 
             expression_match = _EXPRESSION_PATTERN.match(text, position)
             if expression_match is not None:
-                expression = self._render_expression_variables(
-                    expression_match.group(1),
-                    text,
-                    env,
-                )
-                rendered.append(
-                    self._replace_expression(
-                        expression,
-                        env.as_dict(),
+                if literal_start < position:
+                    tokens.append(
+                        _TextToken("literal", text[literal_start:position])
+                    )
+                tokens.append(
+                    _TextToken(
+                        "expression",
+                        expression_match.group(1),
                     )
                 )
                 position = expression_match.end()
+                literal_start = position
                 continue
 
-            rendered.append(text[position])
             position += 1
 
-        return "".join(rendered)
+        if literal_start < len(text):
+            tokens.append(_TextToken("literal", text[literal_start:]))
+
+        cached = tuple(tokens)
+        self._token_cache[text] = cached
+        return cached
 
     def evaluate_expression(
         self,
@@ -101,25 +152,25 @@ class TextRenderer:
     ) -> str:
         if "$" not in expression:
             return expression
-        variables = env.variable_dict()
-        return _VARIABLE_PATTERN.sub(
-            lambda match: self._replace_expression_variable(
-                match.group(1),
+        variables: dict[str, object] | None = None
+
+        def replace(match: re.Match[str]) -> str:
+            nonlocal variables
+            variable_name = match.group(1)
+            if variable_name in _ALIAS_EXPRESSION_BY_VARIABLE:
+                return _ALIAS_EXPRESSION_BY_VARIABLE[variable_name]
+            if variables is None:
+                variables = env.variable_dict()
+            return self._replace_variable(
+                variable_name,
                 template_text,
                 variables,
-            ),
+            )
+
+        return _VARIABLE_PATTERN.sub(
+            replace,
             expression,
         )
-
-    def _replace_expression_variable(
-        self,
-        variable_name: str,
-        template_text: str,
-        variables: dict[str, object],
-    ) -> str:
-        if variable_name in _ALIAS_EXPRESSION_BY_VARIABLE:
-            return _ALIAS_EXPRESSION_BY_VARIABLE[variable_name]
-        return self._replace_variable(variable_name, template_text, variables)
 
     def _replace_expression(
         self,
