@@ -265,7 +265,7 @@ class TestTextRenderer:
 
         assert rendered == "35-80-35-80"
         assert variable_dict_calls == 1
-        assert as_dict_calls == 2
+        assert as_dict_calls == 1
 
     def test_evaluates_variables_and_expressions_in_source_order(self) -> None:
         renderer = TextRenderer()

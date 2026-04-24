@@ -47,6 +47,7 @@ class TextRenderer:
 
         rendered: list[str] = []
         variables: dict[str, object] | None = None
+        namespace: dict[str, object] | None = None
         for token in self._tokens(text):
             if token.kind == "literal":
                 rendered.append(token.value)
@@ -69,10 +70,12 @@ class TextRenderer:
                 text,
                 env,
             )
+            if namespace is None:
+                namespace = env.as_dict()
             rendered.append(
                 self._replace_expression(
                     expression,
-                    env.as_dict(),
+                    namespace,
                 )
             )
             variables = None
